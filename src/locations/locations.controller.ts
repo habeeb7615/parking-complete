@@ -4,6 +4,7 @@ import { LocationsService, CreateLocationData } from './locations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams } from '../contractors/contractors.service';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 
@@ -52,7 +53,7 @@ export class LocationsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Create location', description: 'Create a new parking location' })
   @ApiBody({
     schema: {
@@ -77,7 +78,7 @@ export class LocationsController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Update location', description: 'Update parking location information' })
   @ApiParam({ name: 'id', description: 'Location ID', type: 'string' })
   @ApiBody({
@@ -103,7 +104,7 @@ export class LocationsController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Delete location', description: 'Soft delete a parking location' })
   @ApiParam({ name: 'id', description: 'Location ID', type: 'string' })
   @ApiStandardResponse({
@@ -129,7 +130,7 @@ export class LocationsController {
 
   @Post(':id/assign-attendant')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Assign attendant to location', description: 'Assign an attendant to a parking location' })
   @ApiParam({ name: 'id', description: 'Location ID', type: 'string' })
   @ApiBody({
@@ -151,7 +152,7 @@ export class LocationsController {
 
   @Delete(':id/attendant/:attendantId')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Remove attendant from location', description: 'Remove an attendant from a parking location' })
   @ApiParam({ name: 'id', description: 'Location ID', type: 'string' })
   @ApiParam({ name: 'attendantId', description: 'Attendant ID', type: 'string' })

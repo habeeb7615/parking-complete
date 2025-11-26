@@ -4,6 +4,7 @@ import { SubscriptionDashboardService } from './subscription-dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 
 @ApiTags('subscription-dashboard')
@@ -15,7 +16,7 @@ export class SubscriptionDashboardController {
 
   @Get('contractor-details')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get contractor subscription details', description: 'Get subscription details for all contractors' })
   @ApiStandardResponse({
     status: 200,
@@ -27,7 +28,7 @@ export class SubscriptionDashboardController {
 
   @Get('payment-statistics')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get payment statistics', description: 'Get payment statistics (today, week, month, total)' })
   @ApiStandardResponse({
     status: 200,
@@ -39,7 +40,7 @@ export class SubscriptionDashboardController {
 
   @Get('plan-purchase-statistics')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get plan purchase statistics', description: 'Get statistics on subscription plan purchases' })
   @ApiStandardResponse({
     status: 200,
@@ -51,7 +52,7 @@ export class SubscriptionDashboardController {
 
   @Get('contractor/:contractorId/payments')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get contractor payment details', description: 'Get all payment details for a contractor' })
   @ApiParam({ name: 'contractorId', description: 'Contractor ID', type: 'string' })
   @ApiStandardResponse({
@@ -64,7 +65,7 @@ export class SubscriptionDashboardController {
 
   @Get('contractor/:contractorId/history')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get contractor subscription history', description: 'Get subscription history for a contractor' })
   @ApiParam({ name: 'contractorId', description: 'Contractor ID', type: 'string' })
   @ApiStandardResponse({
@@ -77,7 +78,7 @@ export class SubscriptionDashboardController {
 
   @Get('payments')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get all payment details', description: 'Get all payment details across the system' })
   @ApiStandardResponse({
     status: 200,

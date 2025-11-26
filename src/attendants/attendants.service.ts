@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Attendant } from '../entities/attendant.entity';
 import { Profile } from '../entities/profile.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
@@ -108,7 +109,7 @@ export class AttendantsService {
       .createQueryBuilder('profile')
       .innerJoin('contractors', 'contractor', 'contractor.user_id = profile.id')
       .where('profile.id = :userId', { userId: contractorUserId })
-      .andWhere('profile.role = :role', { role: 'contractor' })
+      .andWhere('profile.role = :role', { role: UserRole.CONTRACTOR })
       .andWhere('profile.is_deleted = :isDeleted', { isDeleted: false })
       .select('contractor.id', 'contractorId')
       .getRawOne();
@@ -214,7 +215,7 @@ export class AttendantsService {
       email: data.email,
       password: hashedPassword,
       phone_number: data.phone_number || null,
-      role: 'attendant',
+      role: UserRole.ATTENDANT,
       status: data.status || 'active',
       is_first_login: true,
       is_deleted: false,

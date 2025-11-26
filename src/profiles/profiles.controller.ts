@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Put, Patch, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, UseGuards, Param, Body, Query, Request, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ProfilesService } from './profiles.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
 
 @ApiTags('profiles')
 @Controller('profiles')
@@ -38,7 +39,11 @@ export class ProfilesController {
   @ApiParam({ name: 'role', description: 'User role (super_admin, contractor, attendant)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Profiles retrieved successfully' })
   async getProfilesByRole(@Param('role') role: string) {
-    return this.profilesService.getProfilesByRole(role);
+    // Validate and convert string to UserRole enum
+    if (!Object.values(UserRole).includes(role as UserRole)) {
+      throw new BadRequestException(`Invalid role. Valid roles are: ${Object.values(UserRole).join(', ')}`);
+    }
+    return this.profilesService.getProfilesByRole(role as UserRole);
   }
 
   @Post('super-admin')

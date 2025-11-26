@@ -4,6 +4,7 @@ import { ContractorsService, PaginationParams, CreateContractorData } from './co
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 
 @ApiTags('contractors')
@@ -52,7 +53,7 @@ export class ContractorsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create contractor', description: 'Create a new contractor with profile' })
   @ApiBody({
     schema: {
@@ -97,7 +98,7 @@ export class ContractorsController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update contractor', description: 'Update contractor information' })
   @ApiParam({ name: 'id', description: 'Contractor ID', type: 'string' })
   @ApiBody({
@@ -126,7 +127,7 @@ export class ContractorsController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Delete contractor', description: 'Soft delete a contractor' })
   @ApiParam({ name: 'id', description: 'Contractor ID', type: 'string' })
   @ApiStandardResponse({

@@ -5,6 +5,7 @@ import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams } from '../contractors/contractors.service';
 
 @ApiTags('attendants')
@@ -66,7 +67,7 @@ export class AttendantsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Create attendant', description: 'Create a new attendant with profile' })
   @ApiBody({
     schema: {
@@ -91,7 +92,7 @@ export class AttendantsController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Update attendant', description: 'Update attendant information' })
   @ApiParam({ name: 'id', description: 'Attendant ID', type: 'string' })
   @ApiBody({
@@ -115,7 +116,7 @@ export class AttendantsController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Delete attendant', description: 'Soft delete an attendant' })
   @ApiParam({ name: 'id', description: 'Attendant ID', type: 'string' })
   @ApiStandardResponse({

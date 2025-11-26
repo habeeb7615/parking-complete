@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, ConflictException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Profile } from '../entities/profile.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 
@@ -26,7 +27,7 @@ export class ProfilesService {
   }): Promise<Profile> {
     // Check if super admin already exists
     const existingSuperAdmin = await this.profileRepository.findOne({
-      where: { role: 'super_admin', is_deleted: false },
+      where: { role: UserRole.SUPER_ADMIN, is_deleted: false },
     });
 
     if (existingSuperAdmin) {
@@ -53,7 +54,7 @@ export class ProfilesService {
       email: data.email,
       password: hashedPassword,
       phone_number: data.phone_number || null,
-      role: 'super_admin',
+      role: UserRole.SUPER_ADMIN,
       status: 'active',
       is_first_login: false,
       is_deleted: false,
@@ -71,7 +72,7 @@ export class ProfilesService {
     });
   }
 
-  async getProfilesByRole(role: string) {
+  async getProfilesByRole(role: UserRole) {
     return this.profileRepository.find({
       where: { role, is_deleted: false },
       order: { created_on: 'DESC' },

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere } from 'typeorm';
 import { Contractor } from '../entities/contractor.entity';
 import { Profile } from '../entities/profile.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 
@@ -152,7 +153,7 @@ export class ContractorsService {
       email: data.email,
       password: hashedPassword,
       phone_number: data.phone_number || null,
-      role: 'contractor',
+      role: UserRole.CONTRACTOR,
       status: data.status || 'active',
       is_first_login: true,
       is_deleted: false,

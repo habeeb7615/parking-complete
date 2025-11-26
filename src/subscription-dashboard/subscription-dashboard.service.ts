@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Profile } from '../entities/profile.entity';
 import { Payment } from '../entities/payment.entity';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 
 @Injectable()
 export class SubscriptionDashboardService {
@@ -20,7 +21,7 @@ export class SubscriptionDashboardService {
     const contractors = await this.profileRepository
       .createQueryBuilder('profile')
       .leftJoinAndSelect('profile.subscription_plans', 'plan')
-      .where('profile.role = :role', { role: 'contractor' })
+      .where('profile.role = :role', { role: UserRole.CONTRACTOR })
       .andWhere('profile.is_deleted = false')
       .getMany();
 

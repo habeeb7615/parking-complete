@@ -9,6 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { SubscriptionPlan } from './subscription-plan.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 
 @Entity('profiles')
 export class Profile {
@@ -27,8 +28,12 @@ export class Profile {
   @Column({ nullable: true, select: false })
   password: string;
 
-  @Column()
-  role: string;
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.ATTENDANT,
+  })
+  role: UserRole;
 
   @Column({ nullable: true })
   status: string;

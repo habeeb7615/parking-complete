@@ -4,6 +4,7 @@ import { SubscriptionsService, CreateSubscriptionPlanData, AssignSubscriptionDat
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 
 @ApiTags('subscriptions')
@@ -37,7 +38,7 @@ export class SubscriptionsController {
 
   @Post('plans')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create subscription plan', description: 'Create a new subscription plan' })
   @ApiBody({
     schema: {
@@ -62,7 +63,7 @@ export class SubscriptionsController {
 
   @Put('plans/:id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update subscription plan', description: 'Update an existing subscription plan' })
   @ApiParam({ name: 'id', description: 'Plan ID', type: 'string' })
   @ApiBody({
@@ -88,7 +89,7 @@ export class SubscriptionsController {
 
   @Delete('plans/:id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Delete subscription plan', description: 'Soft delete a subscription plan' })
   @ApiParam({ name: 'id', description: 'Plan ID', type: 'string' })
   @ApiStandardResponse({
@@ -115,7 +116,7 @@ export class SubscriptionsController {
 
   @Post('assign')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Assign subscription', description: 'Assign or update subscription for a contractor' })
   @ApiBody({
     schema: {
@@ -138,7 +139,7 @@ export class SubscriptionsController {
 
   @Post('extend/:contractorId')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Extend subscription', description: 'Extend existing subscription for a contractor' })
   @ApiParam({ name: 'contractorId', description: 'Contractor ID', type: 'string' })
   @ApiBody({
@@ -160,7 +161,7 @@ export class SubscriptionsController {
 
   @Get('expiring')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get expiring subscriptions', description: 'Get subscriptions expiring within threshold days' })
   @ApiQuery({ name: 'days', required: false, type: Number, example: 7 })
   @ApiStandardResponse({
@@ -173,7 +174,7 @@ export class SubscriptionsController {
 
   @Get('expired')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get expired subscriptions', description: 'Get all expired subscriptions' })
   @ApiStandardResponse({
     status: 200,
@@ -185,7 +186,7 @@ export class SubscriptionsController {
 
   @Get('financial-summary')
   @UseGuards(RolesGuard)
-  @Roles('super_admin')
+  @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get financial summary', description: 'Get subscription financial summary and breakdown' })
   @ApiStandardResponse({
     status: 200,

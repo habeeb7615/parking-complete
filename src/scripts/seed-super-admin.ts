@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { Profile } from '../entities/profile.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import { config } from 'dotenv';
 import { resolve } from 'path';
@@ -29,7 +30,7 @@ async function seedSuperAdmin() {
 
     // Check if super admin already exists
     const existingSuperAdmin = await profileRepository.findOne({
-      where: { role: 'super_admin', is_deleted: false },
+      where: { role: UserRole.SUPER_ADMIN, is_deleted: false },
     });
 
     if (existingSuperAdmin) {
@@ -54,7 +55,7 @@ async function seedSuperAdmin() {
       email: process.env.SUPER_ADMIN_EMAIL || 'admin@parkflow.com',
       password: hashedPassword,
       phone_number: process.env.SUPER_ADMIN_PHONE || null,
-      role: 'super_admin',
+      role: UserRole.SUPER_ADMIN,
       status: 'active',
       is_first_login: false,
       is_deleted: false,

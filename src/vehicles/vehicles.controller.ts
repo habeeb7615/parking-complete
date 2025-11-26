@@ -16,6 +16,7 @@ import { VehiclesService, CreateVehicleData, CheckoutVehicleData } from './vehic
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams } from '../contractors/contractors.service';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 
@@ -72,7 +73,7 @@ export class VehiclesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor', 'attendant')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Create vehicle (Check-in)', description: 'Create a new vehicle check-in record' })
   @ApiBody({
     schema: {
@@ -96,7 +97,7 @@ export class VehiclesController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor', 'attendant')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Update vehicle', description: 'Update vehicle information' })
   @ApiParam({ name: 'id', description: 'Vehicle ID', type: 'string' })
   @ApiBody({
@@ -119,7 +120,7 @@ export class VehiclesController {
 
   @Patch(':id/checkout')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'contractor', 'attendant')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Checkout vehicle', description: 'Checkout a vehicle and process payment' })
   @ApiParam({ name: 'id', description: 'Vehicle ID', type: 'string' })
   @ApiBody({
@@ -145,7 +146,7 @@ export class VehiclesController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('super_admin', 'attendant')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Delete vehicle', description: 'Soft delete a vehicle' })
   @ApiParam({ name: 'id', description: 'Vehicle ID', type: 'string' })
   @ApiStandardResponse({
