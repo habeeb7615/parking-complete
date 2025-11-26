@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, UseGuards, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SubscriptionsService, CreateSubscriptionPlanData, AssignSubscriptionData } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -61,7 +61,7 @@ export class SubscriptionsController {
     return this.subscriptionsService.createSubscriptionPlan(data);
   }
 
-  @Put('plans/:id')
+  @Post('plans/update/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update subscription plan', description: 'Update an existing subscription plan' })
@@ -87,7 +87,7 @@ export class SubscriptionsController {
     return this.subscriptionsService.updateSubscriptionPlan(id, data);
   }
 
-  @Delete('plans/:id')
+  @Get('plans/delete/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Delete subscription plan', description: 'Soft delete a subscription plan' })

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, UseGuards, Param, Body, Query, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Param, Body, Query, Request, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ProfilesService } from './profiles.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -12,33 +12,33 @@ import { UserRole } from '../common/enums/user-role.enum';
 export class ProfilesController {
   constructor(private profilesService: ProfilesService) {}
 
-  @Get(':id')
+  @Get('getOne/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get user profile', description: 'Retrieve user profile by ID' })
+  @ApiOperation({ summary: 'Get one profile', description: 'Retrieve user profile by ID' })
   @ApiParam({ name: 'id', description: 'User ID', type: 'string' })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Profile not found' })
-  async getProfile(@Param('id') id: string) {
+  async getOne(@Param('id') id: string) {
     return this.profilesService.getProfile(id);
   }
 
-  @Get()
+  @Get('getAll')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all profiles', description: 'Retrieve all user profiles' })
   @ApiResponse({ status: 200, description: 'Profiles retrieved successfully' })
-  async getAllProfiles() {
+  async getAll() {
     return this.profilesService.getAllProfiles();
   }
 
-  @Get('role/:role')
+  @Get('getByRole/:role')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get profiles by role', description: 'Retrieve profiles filtered by role' })
   @ApiParam({ name: 'role', description: 'User role (super_admin, contractor, attendant)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Profiles retrieved successfully' })
-  async getProfilesByRole(@Param('role') role: string) {
+  async getByRole(@Param('role') role: string) {
     // Validate and convert string to UserRole enum
     if (!Object.values(UserRole).includes(role as UserRole)) {
       throw new BadRequestException(`Invalid role. Valid roles are: ${Object.values(UserRole).join(', ')}`);
@@ -46,7 +46,7 @@ export class ProfilesController {
     return this.profilesService.getProfilesByRole(role as UserRole);
   }
 
-  @Post('super-admin')
+  @Post('create')
   // Public endpoint - allows creating first super admin without authentication
   // Service will check if super admin exists and prevent duplicates
   @ApiOperation({ 
@@ -70,11 +70,11 @@ export class ProfilesController {
     description: 'Super Admin created successfully',
   })
   @ApiErrorResponse(409, 'Super Admin already exists or email already in use')
-  async createSuperAdmin(@Body() data: { user_name: string; email: string; password: string; phone_number?: string }) {
+  async create(@Body() data: { user_name: string; email: string; password: string; phone_number?: string }) {
     return this.profilesService.createSuperAdmin(data);
   }
 
-  @Put(':id')
+  @Post('update/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update profile', description: 'Update user profile information' })
@@ -96,11 +96,11 @@ export class ProfilesController {
     description: 'Profile updated successfully',
   })
   @ApiErrorResponse(404, 'Profile not found')
-  async updateProfile(@Param('id') id: string, @Body() data: any, @Request() req) {
+  async update(@Param('id') id: string, @Body() data: any, @Request() req) {
     return this.profilesService.updateProfile(id, data, req.user?.id);
   }
 
-  @Patch(':id/password')
+  @Post('updatePassword/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Change password', description: 'Change user password' })
@@ -120,11 +120,11 @@ export class ProfilesController {
     description: 'Password changed successfully',
   })
   @ApiErrorResponse(400, 'Invalid old password or profile not found')
-  async changePassword(@Param('id') id: string, @Body() data: { oldPassword?: string; newPassword: string }) {
+  async updatePassword(@Param('id') id: string, @Body() data: { oldPassword?: string; newPassword: string }) {
     return this.profilesService.changePassword(id, data.oldPassword || '', data.newPassword);
   }
 
-  @Patch(':id/email')
+  @Post('updateEmail/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update email', description: 'Update user email address' })

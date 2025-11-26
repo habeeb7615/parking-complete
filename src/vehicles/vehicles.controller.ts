@@ -2,9 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Patch,
-  Delete,
   UseGuards,
   Param,
   Body,
@@ -95,7 +92,7 @@ export class VehiclesController {
     return this.vehiclesService.createVehicle(data, req.user?.id);
   }
 
-  @Put(':id')
+  @Post('update/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Update vehicle', description: 'Update vehicle information' })
@@ -118,7 +115,7 @@ export class VehiclesController {
     return this.vehiclesService.updateVehicle(id, data, req.user?.id);
   }
 
-  @Patch(':id/checkout')
+  @Post('checkout/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Checkout vehicle', description: 'Checkout a vehicle and process payment' })
@@ -144,7 +141,7 @@ export class VehiclesController {
     return this.vehiclesService.checkoutVehicle(id, checkoutData, req.user?.id);
   }
 
-  @Delete(':id')
+  @Get('delete/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Delete vehicle', description: 'Soft delete a vehicle' })

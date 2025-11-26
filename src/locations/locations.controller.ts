@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { LocationsService, CreateLocationData } from './locations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -76,7 +76,7 @@ export class LocationsController {
     return this.locationsService.createLocation(data, req.user?.id);
   }
 
-  @Put(':id')
+  @Post('update/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Update location', description: 'Update parking location information' })
@@ -102,7 +102,7 @@ export class LocationsController {
     return this.locationsService.updateLocation(id, data, req.user?.id);
   }
 
-  @Delete(':id')
+  @Get('delete/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Delete location', description: 'Soft delete a parking location' })
@@ -150,7 +150,7 @@ export class LocationsController {
     return this.locationsService.assignLocationToAttendant(data.attendantId, id);
   }
 
-  @Delete(':id/attendant/:attendantId')
+  @Get('delete/:id/attendant/:attendantId')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Remove attendant from location', description: 'Remove an attendant from a parking location' })

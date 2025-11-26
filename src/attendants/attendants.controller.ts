@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { AttendantsService, CreateAttendantData } from './attendants.service';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
@@ -90,7 +90,7 @@ export class AttendantsController {
     return this.attendantsService.createAttendant(data, req.user?.id);
   }
 
-  @Put(':id')
+  @Post('update/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Update attendant', description: 'Update attendant information' })
@@ -114,7 +114,7 @@ export class AttendantsController {
     return this.attendantsService.updateAttendant(id, data, req.user?.id);
   }
 
-  @Delete(':id')
+  @Get('delete/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Delete attendant', description: 'Soft delete an attendant' })
