@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
+import { IPagination, IPaginatedResponse, convertToPaginationPayload } from '@/types/pagination.types';
 
 export interface Location {
   id: string;
@@ -44,9 +45,12 @@ export interface LocationStats {
 export interface PaginatedResponse<T> {
   data: T[];
   count: number;
-  page: number;
-  pageSize: number;
+  curPage: number;
+  perPage: number;
   totalPages: number;
+  // Legacy fields for backward compatibility
+  page?: number;
+  pageSize?: number;
 }
 
 export interface PaginationParams {
@@ -87,23 +91,20 @@ export class LocationAPI {
 
   // Super Admin only - Get paginated locations
   static async getPaginatedLocations(params: PaginationParams = {}): Promise<PaginatedResponse<Location>> {
-    const {
-      page = 1,
-      pageSize = 10,
-      search = '',
-      sortBy = 'created_on',
-      sortOrder = 'desc'
-    } = params;
-
-    const response = await apiClient.get<PaginatedResponse<Location>>('/locations/paginated', {
-      page,
-      pageSize,
-      search,
-      sortBy,
-      sortOrder
-    });
-
-    return response.data;
+    const paginationPayload = convertToPaginationPayload(params);
+    const response = await apiClient.post<IPaginatedResponse<Location>>('/locations/paginated', paginationPayload);
+    
+    // Convert response to match expected format (map curPage/perPage to page/pageSize for backward compatibility)
+    return {
+      data: response.data.data,
+      count: response.data.count,
+      curPage: response.data.curPage,
+      perPage: response.data.perPage,
+      totalPages: response.data.totalPages,
+      // Legacy fields for backward compatibility
+      page: response.data.curPage,
+      pageSize: response.data.perPage
+    } as any;
   }
 
   // Get locations for contractor
@@ -121,13 +122,13 @@ export class LocationAPI {
 
   // Update location
   static async updateLocation(id: string, data: Partial<CreateLocationData>): Promise<Location> {
-    const response = await apiClient.put<Location>(`/locations/${id}`, data);
+    const response = await apiClient.post<Location>(`/locations/update/${id}`, data);
     return response.data;
   }
 
   // Delete location (soft delete)
   static async deleteLocation(id: string): Promise<void> {
-    await apiClient.delete(`/locations/${id}`);
+    await apiClient.get(`/locations/delete/${id}`);
   }
 
   // Get location statistics
@@ -146,6 +147,6 @@ export class LocationAPI {
 
   // Remove location assignment from attendant
   static async removeLocationFromAttendant(locationId: string, attendantId: string): Promise<void> {
-    await apiClient.delete(`/locations/${locationId}/attendant/${attendantId}`);
+    await apiClient.get(`/locations/delete/${locationId}/attendant/${attendantId}`);
   }
 }

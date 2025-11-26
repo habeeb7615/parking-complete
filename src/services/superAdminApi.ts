@@ -212,12 +212,12 @@ export class SuperAdminAPI {
   }
 
   static async updateContractor(contractorId: string, updateData: Partial<CreateContractorData>): Promise<any> {
-    const response = await apiClient.put(`/contractors/${contractorId}`, updateData);
+    const response = await apiClient.post(`/contractors/update/${contractorId}`, updateData);
     return response.data;
   }
 
   static async deleteContractor(contractorId: string): Promise<void> {
-    await apiClient.delete(`/contractors/${contractorId}`);
+    await apiClient.get(`/contractors/delete/${contractorId}`);
   }
 
   // Get system analytics for dashboard
@@ -265,13 +265,13 @@ export class SuperAdminAPI {
 
   // Update location (Super Admin only)
   static async updateLocation(locationId: string, updateData: Partial<CreateLocationData>): Promise<any> {
-    const response = await apiClient.put(`/locations/${locationId}`, updateData);
+    const response = await apiClient.post(`/locations/update/${locationId}`, updateData);
     return response.data;
   }
 
   // Delete location (Super Admin only)
   static async deleteLocation(locationId: string): Promise<void> {
-    await apiClient.delete(`/locations/${locationId}`);
+    await apiClient.get(`/locations/delete/${locationId}`);
   }
 
   // Get all attendants
@@ -296,12 +296,12 @@ export class SuperAdminAPI {
 
   // Update attendant (Super Admin only)
   static async updateAttendant(attendantId: string, updateData: Partial<CreateAttendantData>): Promise<any> {
-    const response = await apiClient.put(`/attendants/${attendantId}`, updateData);
+    const response = await apiClient.post(`/attendants/update/${attendantId}`, updateData);
     return response.data;
   }
 
   // Delete attendant (Super Admin only)
   static async deleteAttendant(attendantId: string): Promise<void> {
-    await apiClient.delete(`/attendants/${attendantId}`);
+    await apiClient.get(`/attendants/delete/${attendantId}`);
   }
 }

@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
+import { IPagination, IPaginatedResponse, convertToPaginationPayload } from '@/types/pagination.types';
 
 export interface DashboardMetrics {
   totalContractors: number;
@@ -61,10 +62,79 @@ export class DashboardAPI {
     return response.data || [];
   }
 
-  // Get recent activity
+  // Get recent activity (legacy - uses limit parameter)
   static async getRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
     const response = await apiClient.get<RecentActivity[]>('/dashboard/recent-activity', { limit });
     return response.data || [];
+  }
+
+  // Get recent activity with pagination
+  static async getRecentActivityPaginated(params: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    type?: string;
+  } = {}): Promise<{
+    data: RecentActivity[];
+    count: number;
+    curPage: number;
+    perPage: number;
+    totalPages: number;
+    page?: number;
+    pageSize?: number;
+  }> {
+    const {
+      page = 1,
+      pageSize = 10,
+      search = '',
+      sortBy = 'timestamp',
+      sortOrder = 'desc',
+      type = ''
+    } = params;
+
+    const whereClause: Array<{ key: string; value: string; operator?: string }> = [];
+
+    // Add search to whereClause
+    if (search) {
+      whereClause.push({
+        key: 'all',
+        value: search,
+        operator: 'LIKE'
+      });
+    }
+
+    // Add type filter to whereClause
+    if (type) {
+      whereClause.push({
+        key: 'type',
+        value: type,
+        operator: '='
+      });
+    }
+
+    const paginationPayload = {
+      curPage: page,
+      perPage: pageSize,
+      sortBy,
+      direction: sortOrder,
+      whereClause
+    };
+
+    const response = await apiClient.post<IPaginatedResponse<RecentActivity>>('/dashboard/recent-activity/paginated', paginationPayload);
+    
+    // Convert response to match expected format (map curPage/perPage to page/pageSize for backward compatibility)
+    return {
+      data: response.data.data,
+      count: response.data.count,
+      curPage: response.data.curPage,
+      perPage: response.data.perPage,
+      totalPages: response.data.totalPages,
+      // Legacy fields for backward compatibility
+      page: response.data.curPage,
+      pageSize: response.data.perPage
+    };
   }
 
   // Get system health status

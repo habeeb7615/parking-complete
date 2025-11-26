@@ -57,7 +57,7 @@ export default function ResetPasswordSimple() {
       if (!user?.id) throw new Error('User not authenticated');
       
       const { apiClient } = await import('@/lib/apiClient');
-      const response = await apiClient.patch(`/profiles/${user.id}/password`, {
+      const response = await apiClient.post(`/profiles/updatePassword/${user.id}`, {
         newPassword: password
       });
 

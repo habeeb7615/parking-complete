@@ -40,9 +40,14 @@ export const useDashboardData = () => {
         pendingApprovals: metrics.pendingApprovals,
       });
 
-      // Fetch recent activity
-      const activities = await DashboardAPI.getRecentActivity(5);
-      setRecentActivity(activities);
+      // Fetch recent activity with pagination
+      const activityResult = await DashboardAPI.getRecentActivityPaginated({
+        page: 1,
+        pageSize: 5,
+        sortBy: 'timestamp',
+        sortOrder: 'desc'
+      });
+      setRecentActivity(activityResult.data);
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);

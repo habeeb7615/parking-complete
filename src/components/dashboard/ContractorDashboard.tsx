@@ -208,7 +208,7 @@ const ContractorDashboard = memo(function ContractorDashboard() {
       }
 
       // Update contractor rates using apiClient directly
-      await apiClient.put(`/contractors/${contractor.id}`, {
+      await apiClient.post(`/contractors/update/${contractor.id}`, {
         rates_2wheeler: rates.rates_2wheeler,
         rates_4wheeler: rates.rates_4wheeler
       });

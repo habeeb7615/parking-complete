@@ -118,7 +118,7 @@ export class SubscriptionAPI {
     planId: string, 
     updates: Partial<Pick<SubscriptionPlan, 'name' | 'price' | 'max_locations' | 'max_attendants' | 'features'>>
   ): Promise<SubscriptionPlan> {
-    const response = await apiClient.put<SubscriptionPlan>(`/subscriptions/plans/${planId}`, updates);
+    const response = await apiClient.post<SubscriptionPlan>(`/subscriptions/plans/update/${planId}`, updates);
     return response.data;
   }
 
@@ -132,7 +132,7 @@ export class SubscriptionAPI {
 
   // Delete subscription plan (soft delete)
   static async deleteSubscriptionPlan(planId: string): Promise<void> {
-    await apiClient.delete(`/subscriptions/plans/${planId}`);
+    await apiClient.get(`/subscriptions/plans/delete/${planId}`);
   }
 
   // Get financial summary data

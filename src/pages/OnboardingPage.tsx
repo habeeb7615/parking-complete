@@ -70,7 +70,7 @@ export default function OnboardingPage() {
       
       // For first-time password setup (is_first_login: true), oldPassword is not required
       // Backend will automatically handle this based on is_first_login flag
-      await apiClient.patch(`/profiles/${user.id}/password`, {
+      await apiClient.post(`/profiles/updatePassword/${user.id}`, {
         newPassword: formData.newPassword
       });
 

@@ -116,7 +116,7 @@ export class VehicleAPI {
 
   // Attendant only - Check out vehicle
   static async checkoutVehicle(vehicleId: string, checkoutData: VehicleCheckoutData): Promise<Vehicle> {
-    const response = await apiClient.patch<Vehicle>(`/vehicles/${vehicleId}/checkout`, {
+    const response = await apiClient.post<Vehicle>(`/vehicles/checkout/${vehicleId}`, {
       check_out_time: checkoutData.check_out_time,
       payment_amount: checkoutData.payment_amount,
       payment_method: checkoutData.payment_method
@@ -168,12 +168,12 @@ export class VehicleAPI {
 
   // Update vehicle
   static async updateVehicle(id: string, data: Partial<CreateVehicleData>): Promise<Vehicle> {
-    const response = await apiClient.put<Vehicle>(`/vehicles/${id}`, data);
+    const response = await apiClient.post<Vehicle>(`/vehicles/update/${id}`, data);
     return response.data;
   }
 
   // Delete vehicle
   static async deleteVehicle(vehicleId: string): Promise<void> {
-    await apiClient.delete(`/vehicles/${vehicleId}`);
+    await apiClient.get(`/vehicles/delete/${vehicleId}`);
   }
 }

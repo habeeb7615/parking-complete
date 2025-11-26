@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
+import { IPagination, IPaginatedResponse, convertToPaginationPayload } from '@/types/pagination.types';
 
 export interface Contractor {
   id: string;
@@ -130,9 +131,12 @@ export interface PaginationParams {
 export interface PaginatedResponse<T> {
   data: T[];
   count: number;
-  page: number;
-  pageSize: number;
+  curPage: number;
+  perPage: number;
   totalPages: number;
+  // Legacy fields for backward compatibility
+  page?: number;
+  pageSize?: number;
 }
 
 export class ContractorAPI {
@@ -144,23 +148,20 @@ export class ContractorAPI {
 
   // Get contractors with pagination
   static async getContractorsPaginated(params: PaginationParams = {}): Promise<PaginatedResponse<Contractor>> {
-    const {
-      page = 1,
-      pageSize = 10,
-      search = '',
-      sortBy = 'created_on',
-      sortOrder = 'desc'
-    } = params;
-
-    const response = await apiClient.get<PaginatedResponse<Contractor>>('/contractors/paginated', {
-      page,
-      pageSize,
-      search,
-      sortBy,
-      sortOrder
-    });
-
-    return response.data;
+    const paginationPayload = convertToPaginationPayload(params);
+    const response = await apiClient.post<IPaginatedResponse<Contractor>>('/contractors/paginated', paginationPayload);
+    
+    // Convert response to match expected format (map curPage/perPage to page/pageSize for backward compatibility)
+    return {
+      data: response.data.data,
+      count: response.data.count,
+      curPage: response.data.curPage,
+      perPage: response.data.perPage,
+      totalPages: response.data.totalPages,
+      // Legacy fields for backward compatibility
+      page: response.data.curPage,
+      pageSize: response.data.perPage
+    } as any;
   }
 
   // Get contractor by user ID (for contractor dashboard)
@@ -173,6 +174,23 @@ export class ContractorAPI {
   static async getContractorById(id: string): Promise<Contractor> {
     const response = await apiClient.get<Contractor>(`/contractors/${id}`);
     return response.data;
+  }
+
+  // Create contractor
+  static async createContractor(data: any): Promise<Contractor> {
+    const response = await apiClient.post<Contractor>('/contractors', data);
+    return response.data;
+  }
+
+  // Update contractor
+  static async updateContractor(id: string, data: any): Promise<Contractor> {
+    const response = await apiClient.post<Contractor>(`/contractors/update/${id}`, data);
+    return response.data;
+  }
+
+  // Delete contractor (soft delete)
+  static async deleteContractor(id: string): Promise<void> {
+    await apiClient.get(`/contractors/delete/${id}`);
   }
 
   // Get all locations under a contractor

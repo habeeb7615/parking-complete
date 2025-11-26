@@ -398,7 +398,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       const { apiClient } = await import('@/lib/apiClient');
-      const response = await apiClient.put<Profile>(`/profiles/${user.id}`, updates);
+      const response = await apiClient.post<Profile>(`/profiles/update/${user.id}`, updates);
       
       if (response.data) {
         setProfile(response.data);

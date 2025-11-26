@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
+import { IPagination, IPaginatedResponse, convertToPaginationPayload } from '@/types/pagination.types';
 
 export interface Attendant {
   id: string;
@@ -74,9 +75,12 @@ export interface CreateAttendantData {
 export interface PaginatedResponse<T> {
   data: T[];
   count: number;
-  page: number;
-  pageSize: number;
+  curPage: number;
+  perPage: number;
   totalPages: number;
+  // Legacy fields for backward compatibility
+  page?: number;
+  pageSize?: number;
 }
 
 export interface PaginationParams {
@@ -92,23 +96,20 @@ export class AttendantAPI {
   
   // Super Admin - Get all attendants with pagination
   static async getAllAttendants(params: PaginationParams = {}): Promise<PaginatedResponse<Attendant>> {
-    const {
-      page = 1,
-      pageSize = 10,
-      search = '',
-      sortBy = 'created_on',
-      sortOrder = 'desc'
-    } = params;
-
-    const response = await apiClient.get<PaginatedResponse<Attendant>>('/attendants/paginated', {
-      page,
-      pageSize,
-      search,
-      sortBy,
-      sortOrder
-    });
-
-    return response.data;
+    const paginationPayload = convertToPaginationPayload(params);
+    const response = await apiClient.post<IPaginatedResponse<Attendant>>('/attendants/paginated', paginationPayload);
+    
+    // Convert response to match expected format (map curPage/perPage to page/pageSize for backward compatibility)
+    return {
+      data: response.data.data,
+      count: response.data.count,
+      curPage: response.data.curPage,
+      perPage: response.data.perPage,
+      totalPages: response.data.totalPages,
+      // Legacy fields for backward compatibility
+      page: response.data.curPage,
+      pageSize: response.data.perPage
+    } as any;
   }
 
   // Get attendants by contractor (for contractor dashboard)
@@ -157,13 +158,13 @@ export class AttendantAPI {
     if (data.location_id !== undefined) updateData.location_id = data.location_id;
     if (data.status) updateData.status = data.status;
 
-    const response = await apiClient.put<Attendant>(`/attendants/${id}`, updateData);
+    const response = await apiClient.post<Attendant>(`/attendants/update/${id}`, updateData);
     return response.data;
   }
 
   // Super Admin - Delete attendant (soft delete)
   static async deleteAttendant(id: string): Promise<void> {
-    await apiClient.delete(`/attendants/${id}`);
+    await apiClient.get(`/attendants/delete/${id}`);
   }
 
   // Super Admin - Get attendant statistics

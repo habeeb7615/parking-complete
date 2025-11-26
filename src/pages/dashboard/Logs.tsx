@@ -98,11 +98,17 @@ export default function Logs() {
         // For contractors, fetch only logs related to their activities
         data = await fetchContractorLogs(user.id);
       } else {
-        // For super admins, try to get recent activity from dashboard API
+        // For super admins, try to get recent activity from dashboard API with pagination
         try {
-          const response = await apiClient.get('/dashboard/recent-activity', { limit: 100 });
-          if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-            data = response.data;
+          const { DashboardAPI } = await import('@/services/dashboardApi');
+          const result = await DashboardAPI.getRecentActivityPaginated({
+            page: 1,
+            pageSize: 100,
+            sortBy: 'timestamp',
+            sortOrder: 'desc'
+          });
+          if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+            data = result.data;
           } else {
             // If no recent activity, create sample logs from existing data
             console.log('Creating sample logs from existing data...');

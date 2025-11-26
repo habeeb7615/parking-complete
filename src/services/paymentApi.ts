@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
+import { IPagination, IPaginatedResponse, convertToPaginationPayload } from '@/types/pagination.types';
 
 export interface Payment {
   id: string;
@@ -56,9 +57,12 @@ export interface PaginationParams {
 export interface PaginatedResponse<T> {
   data: T[];
   count: number;
-  page: number;
-  pageSize: number;
+  curPage: number;
+  perPage: number;
   totalPages: number;
+  // Legacy fields for backward compatibility
+  page?: number;
+  pageSize?: number;
 }
 
 export class PaymentAPI {
@@ -70,23 +74,20 @@ export class PaymentAPI {
 
   // Get payments with pagination
   static async getPaymentsPaginated(params: PaginationParams = {}): Promise<PaginatedResponse<Payment>> {
-    const {
-      page = 1,
-      pageSize = 10,
-      search = '',
-      sortBy = 'created_at',
-      sortOrder = 'desc'
-    } = params;
-
-    const response = await apiClient.get<PaginatedResponse<Payment>>('/payments/paginated', {
-      page,
-      pageSize,
-      search,
-      sortBy,
-      sortOrder
-    });
-
-    return response.data;
+    const paginationPayload = convertToPaginationPayload(params);
+    const response = await apiClient.post<IPaginatedResponse<Payment>>('/payments/paginated', paginationPayload);
+    
+    // Convert response to match expected format (map curPage/perPage to page/pageSize for backward compatibility)
+    return {
+      data: response.data.data,
+      count: response.data.count,
+      curPage: response.data.curPage,
+      perPage: response.data.perPage,
+      totalPages: response.data.totalPages,
+      // Legacy fields for backward compatibility
+      page: response.data.curPage,
+      pageSize: response.data.perPage
+    } as any;
   }
 
   // Get payments for contractor

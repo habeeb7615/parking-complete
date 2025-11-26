@@ -115,7 +115,7 @@ export class AuthAPI {
    * Get profile by user ID
    */
   static async getProfileById(userId: string): Promise<Profile> {
-    const response = await apiClient.get<Profile>(`/profiles/${userId}`);
+    const response = await apiClient.get<Profile>(`/profiles/getOne/${userId}`);
     return response.data;
   }
 

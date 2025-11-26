@@ -30,8 +30,13 @@ export function RecentActivity() {
   useEffect(() => {
     const fetchActivities = async () => {
       try {
-        const data = await DashboardAPI.getRecentActivity(10);
-        setActivities(data);
+        const result = await DashboardAPI.getRecentActivityPaginated({
+          page: 1,
+          pageSize: 10,
+          sortBy: 'timestamp',
+          sortOrder: 'desc'
+        });
+        setActivities(result.data);
       } catch (error) {
         console.error('Error fetching recent activity:', error);
       } finally {
