@@ -21,6 +21,7 @@ const Attendants = memo(function Attendants() {
   const { profile, user } = useAuth();
   const isSuperAdmin = profile?.role === "super_admin";
   const isContractor = profile?.role === "contractor";
+  const isAttendant = profile?.role === "attendant";
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -561,7 +562,7 @@ const Attendants = memo(function Attendants() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
                     </TableHead>
-                    {isSuperAdmin && <TableHead>Actions</TableHead>}
+                    {(isSuperAdmin || isContractor || isAttendant) && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -577,7 +578,7 @@ const Attendants = memo(function Attendants() {
                           {attendant.status || 'inactive'}
                         </Badge>
                       </TableCell>
-                      {isSuperAdmin && (
+                      {(isSuperAdmin || isContractor || isAttendant) && (
                         <TableCell>
                           <div className="flex gap-2">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(attendant)}>

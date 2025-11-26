@@ -489,7 +489,7 @@ export default function Locations() {
                           <ArrowUpDown className="ml-2 h-4 w-4" />
                         </Button>
                       </TableHead>
-                      {isSuperAdmin && <TableHead>Actions</TableHead>}
+                      {(isSuperAdmin || isContractor) && <TableHead>Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -503,7 +503,7 @@ export default function Locations() {
                         <TableCell>
                           <Badge variant={loc.status === 'active' ? 'default' : 'secondary'}>{loc.status}</Badge>
                         </TableCell>
-                        {isSuperAdmin && (
+                        {(isSuperAdmin || isContractor) && (
                           <TableCell>
                             <div className="flex gap-2">
                               <Button variant="ghost" size="sm" onClick={() => openEdit(loc)}>
@@ -538,7 +538,7 @@ export default function Locations() {
                           <Badge variant={loc.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                             {loc.status}
                           </Badge>
-                          {isSuperAdmin && (
+                          {(isSuperAdmin || isContractor) && (
                             <div className="flex gap-1">
                               <Button variant="ghost" size="sm" onClick={() => openEdit(loc)}>
                                 <Edit className="h-4 w-4" />
