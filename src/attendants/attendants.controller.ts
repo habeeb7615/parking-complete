@@ -7,6 +7,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams } from '../contractors/contractors.service';
+import { IPagination } from '../common/interfaces/pagination.interface';
+import { PaginationSchema } from '../common/schemas/pagination.schema';
 
 @ApiTags('attendants')
 @Controller('attendants')
@@ -22,16 +24,20 @@ export class AttendantsController {
     return this.attendantsService.getAllAttendants();
   }
 
-  @Get('paginated')
+  @Post('paginated')
   @ApiOperation({ summary: 'Get attendants with pagination', description: 'Retrieve attendants with pagination, search, and sorting' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'sortBy', required: false, type: String, enum: ['created_on', 'user_name', 'email', 'status'] })
-  @ApiQuery({ name: 'sortOrder', required: false, type: String, enum: ['asc', 'desc'] })
+  @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Attendants retrieved successfully' })
-  async getAttendantsPaginated(@Query() params: PaginationParams) {
-    return this.attendantsService.getAttendantsPaginated(params);
+  async getAttendantsPaginated(@Body() pagination: IPagination) {
+    return this.attendantsService.pagination(pagination);
+  }
+
+  @Post('pagination')
+  @ApiOperation({ summary: 'Get attendants with pagination', description: 'Retrieve attendants with advanced pagination and filtering' })
+  @ApiBody({ schema: PaginationSchema })
+  @ApiResponse({ status: 200, description: 'Attendants retrieved successfully' })
+  async pagination(@Body() pagination: IPagination) {
+    return this.attendantsService.pagination(pagination);
   }
 
   @Get('contractor/:contractorUserId')

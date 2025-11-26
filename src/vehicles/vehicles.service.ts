@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vehicle } from '../entities/vehicle.entity';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
+import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 import { randomUUID } from 'crypto';
 
 export interface CreateVehicleData {
@@ -93,6 +94,86 @@ export class VehiclesService {
       pageSize,
       totalPages: Math.ceil(count / pageSize),
     };
+  }
+
+  async pagination(pagination: IPagination): Promise<IPaginatedResponse<any>> {
+    const { curPage, perPage, sortBy = 'check_in_time', direction = 'desc', whereClause } = pagination;
+    let lwhereClause = 'vehicle.is_deleted = false';
+
+    const fieldsToSearch = [
+      'plate_number',
+      'vehicle_type',
+    ];
+
+    fieldsToSearch.forEach((field) => {
+      const clause = whereClause.find((p) => p.key === field);
+      if (clause?.value) {
+        const operator = clause.operator || 'LIKE';
+        if (operator === 'LIKE') {
+          lwhereClause += ` AND vehicle.${field} LIKE '%${clause.value}%'`;
+        } else if (operator === '=') {
+          lwhereClause += ` AND vehicle.${field} = '${clause.value}'`;
+        } else if (operator === '!=') {
+          lwhereClause += ` AND vehicle.${field} != '${clause.value}'`;
+        }
+      }
+    });
+
+    // Date filtering
+    const check_in_time = whereClause.find((p: any) => p.key === 'check_in_time' && p.value);
+    if (check_in_time) {
+      const dateOnly = check_in_time.value.split(' ')[0];
+      lwhereClause += ` AND DATE(vehicle.check_in_time) = '${dateOnly}'`;
+    }
+
+    const check_out_time = whereClause.find((p: any) => p.key === 'check_out_time' && p.value);
+    if (check_out_time) {
+      const dateOnly = check_out_time.value.split(' ')[0];
+      lwhereClause += ` AND DATE(vehicle.check_out_time) = '${dateOnly}'`;
+    }
+
+    // "all" search across multiple fields
+    const allValue = whereClause.find((p) => p.key === 'all')?.value;
+    if (allValue) {
+      const conditions = fieldsToSearch
+        .map((field) => `vehicle.${field} LIKE '%${allValue}%'`)
+        .join(' OR ');
+      lwhereClause += ` AND (${conditions})`;
+    }
+
+    const skip = (curPage - 1) * perPage;
+    const orderDirection = direction.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    // Determine sort field
+    let orderByField = 'vehicle.check_in_time';
+    if (sortBy === 'plate_number') {
+      orderByField = 'vehicle.plate_number';
+    } else if (sortBy === 'vehicle_type') {
+      orderByField = 'vehicle.vehicle_type';
+    } else if (sortBy === 'check_in_time') {
+      orderByField = 'vehicle.check_in_time';
+    } else if (sortBy === 'check_out_time') {
+      orderByField = 'vehicle.check_out_time';
+    } else if (sortBy === 'created_on') {
+      orderByField = 'vehicle.created_on';
+    }
+
+    const [list, count] = await this.vehicleRepository
+      .createQueryBuilder('vehicle')
+      .leftJoinAndSelect('vehicle.parking_locations', 'location')
+      .leftJoinAndSelect('vehicle.contractors', 'contractor')
+      .where(lwhereClause)
+      .skip(skip)
+      .take(perPage)
+      .orderBy(orderByField, orderDirection)
+      .getManyAndCount();
+
+    const data = list.map((vehicle) => ({
+      ...vehicle,
+      status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
+    }));
+
+    return paginateResponse(data, count, curPage, perPage);
   }
 
   async getVehicleById(id: string) {

@@ -1,8 +1,10 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, UseGuards, Query, Body } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { IPagination } from '../common/interfaces/pagination.interface';
+import { PaginationSchema } from '../common/schemas/pagination.schema';
 
 @ApiTags('dashboard')
 @Controller('dashboard')
@@ -54,7 +56,7 @@ export class DashboardController {
   }
 
   @Get('recent-activity')
-  @ApiOperation({ summary: 'Get recent activity', description: 'Get recent system activities and events' })
+  @ApiOperation({ summary: 'Get recent activity (legacy)', description: 'Get recent system activities and events with limit parameter' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiStandardResponse({
     status: 200,
@@ -62,6 +64,17 @@ export class DashboardController {
   })
   async getRecentActivity(@Query('limit') limit?: number) {
     return this.dashboardService.getRecentActivity(limit ? parseInt(limit.toString()) : 10);
+  }
+
+  @Post('recent-activity/paginated')
+  @ApiOperation({ summary: 'Get recent activity with pagination', description: 'Get recent system activities and events with pagination, search, and sorting' })
+  @ApiBody({ schema: PaginationSchema })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Recent activity retrieved successfully',
+  })
+  async getRecentActivityPaginated(@Body() pagination: IPagination) {
+    return this.dashboardService.getRecentActivityPaginated(pagination);
   }
 
   @Get('system-health')

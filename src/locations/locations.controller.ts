@@ -7,6 +7,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams } from '../contractors/contractors.service';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { IPagination } from '../common/interfaces/pagination.interface';
+import { PaginationSchema } from '../common/schemas/pagination.schema';
 
 @ApiTags('locations')
 @Controller('locations')
@@ -22,16 +24,20 @@ export class LocationsController {
     return this.locationsService.getAllLocations();
   }
 
-  @Get('paginated')
+  @Post('paginated')
   @ApiOperation({ summary: 'Get locations with pagination', description: 'Retrieve locations with pagination, search, and sorting' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'sortBy', required: false, type: String, enum: ['created_on', 'locations_name', 'address', 'status'] })
-  @ApiQuery({ name: 'sortOrder', required: false, type: String, enum: ['asc', 'desc'] })
+  @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Locations retrieved successfully' })
-  async getLocationsPaginated(@Query() params: PaginationParams) {
-    return this.locationsService.getLocationsPaginated(params);
+  async getLocationsPaginated(@Body() pagination: IPagination) {
+    return this.locationsService.pagination(pagination);
+  }
+
+  @Post('pagination')
+  @ApiOperation({ summary: 'Get locations with pagination', description: 'Retrieve locations with advanced pagination and filtering' })
+  @ApiBody({ schema: PaginationSchema })
+  @ApiResponse({ status: 200, description: 'Locations retrieved successfully' })
+  async pagination(@Body() pagination: IPagination) {
+    return this.locationsService.pagination(pagination);
   }
 
   @Get(':id')

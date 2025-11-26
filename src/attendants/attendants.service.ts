@@ -7,6 +7,7 @@ import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
+import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 
 export interface CreateAttendantData {
   user_name: string;
@@ -81,6 +82,105 @@ export class AttendantsService {
       pageSize,
       totalPages: Math.ceil(count / pageSize),
     };
+  }
+
+  async pagination(pagination: IPagination): Promise<IPaginatedResponse<Attendant>> {
+    const { curPage, perPage, sortBy = 'created_on', direction = 'desc', whereClause } = pagination;
+    let lwhereClause = 'attendant.is_deleted = false';
+
+    const fieldsToSearch = [
+      'status',
+    ];
+
+    fieldsToSearch.forEach((field) => {
+      const clause = whereClause.find((p) => p.key === field);
+      if (clause?.value) {
+        const operator = clause.operator || 'LIKE';
+        if (operator === 'LIKE') {
+          lwhereClause += ` AND attendant.${field} LIKE '%${clause.value}%'`;
+        } else if (operator === '=') {
+          lwhereClause += ` AND attendant.${field} = '${clause.value}'`;
+        } else if (operator === '!=') {
+          lwhereClause += ` AND attendant.${field} != '${clause.value}'`;
+        }
+      }
+    });
+
+    // Search in profile fields
+    const email = whereClause.find((p) => p.key === 'email');
+    if (email?.value) {
+      const operator = email.operator || 'LIKE';
+      if (operator === 'LIKE') {
+        lwhereClause += ` AND profile.email LIKE '%${email.value}%'`;
+      } else if (operator === '=') {
+        lwhereClause += ` AND profile.email = '${email.value}'`;
+      }
+    }
+
+    const user_name = whereClause.find((p) => p.key === 'user_name');
+    if (user_name?.value) {
+      const operator = user_name.operator || 'LIKE';
+      if (operator === 'LIKE') {
+        lwhereClause += ` AND profile.user_name LIKE '%${user_name.value}%'`;
+      } else if (operator === '=') {
+        lwhereClause += ` AND profile.user_name = '${user_name.value}'`;
+      }
+    }
+
+    const phone_number = whereClause.find((p) => p.key === 'phone_number');
+    if (phone_number?.value) {
+      const operator = phone_number.operator || 'LIKE';
+      if (operator === 'LIKE') {
+        lwhereClause += ` AND profile.phone_number LIKE '%${phone_number.value}%'`;
+      } else if (operator === '=') {
+        lwhereClause += ` AND profile.phone_number = '${phone_number.value}'`;
+      }
+    }
+
+    // Date filtering
+    const created_on = whereClause.find((p: any) => p.key === 'created_on' && p.value);
+    if (created_on) {
+      const dateOnly = created_on.value.split(' ')[0];
+      lwhereClause += ` AND DATE(attendant.created_on) = '${dateOnly}'`;
+    }
+
+    // "all" search across multiple fields
+    const allValue = whereClause.find((p) => p.key === 'all')?.value;
+    if (allValue) {
+      const conditions = [
+        `profile.user_name LIKE '%${allValue}%'`,
+        `profile.email LIKE '%${allValue}%'`,
+        `profile.phone_number LIKE '%${allValue}%'`,
+      ].join(' OR ');
+      lwhereClause += ` AND (${conditions})`;
+    }
+
+    const skip = (curPage - 1) * perPage;
+    const orderDirection = direction.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    // Determine sort field
+    let orderByField = 'attendant.created_on';
+    if (sortBy === 'user_name') {
+      orderByField = 'profile.user_name';
+    } else if (sortBy === 'email') {
+      orderByField = 'profile.email';
+    } else if (sortBy === 'status') {
+      orderByField = 'attendant.status';
+    } else if (sortBy === 'created_on') {
+      orderByField = 'attendant.created_on';
+    }
+
+    const [list, count] = await this.attendantRepository
+      .createQueryBuilder('attendant')
+      .leftJoinAndSelect('attendant.profiles', 'profile')
+      .leftJoinAndSelect('attendant.parking_locations', 'location')
+      .where(lwhereClause)
+      .skip(skip)
+      .take(perPage)
+      .orderBy(orderByField, orderDirection)
+      .getManyAndCount();
+
+    return paginateResponse(list, count, curPage, perPage);
   }
 
   async getAttendantByUserId(userId: string) {

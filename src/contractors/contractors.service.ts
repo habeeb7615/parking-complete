@@ -6,6 +6,7 @@ import { Profile } from '../entities/profile.entity';
 import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 
 export interface PaginationParams {
   page?: number;
@@ -109,6 +110,117 @@ export class ContractorsService {
       pageSize,
       totalPages: Math.ceil(count / pageSize),
     };
+  }
+
+  async pagination(pagination: IPagination): Promise<IPaginatedResponse<Contractor>> {
+    try {
+      const { curPage, perPage, sortBy = 'created_on', direction = 'desc', whereClause = [] } = pagination;
+      
+      // Validate pagination params
+      if (!curPage || curPage < 1) {
+        throw new Error('Invalid curPage: must be >= 1');
+      }
+      if (!perPage || perPage < 1) {
+        throw new Error('Invalid perPage: must be >= 1');
+      }
+
+      const queryBuilder = this.contractorRepository
+        .createQueryBuilder('contractor')
+        .leftJoinAndSelect('contractor.profiles', 'profile')
+        .where('contractor.is_deleted = :isDeleted', { isDeleted: false });
+
+      const fieldsToSearch = [
+        'company_name',
+        'contact_number',
+        'status',
+      ];
+
+      // Process whereClause conditions
+      if (whereClause && Array.isArray(whereClause) && whereClause.length > 0) {
+        fieldsToSearch.forEach((field) => {
+          const clause = whereClause.find((p) => p.key === field);
+          if (clause?.value) {
+            const operator = clause.operator || 'LIKE';
+            const paramName = `param_${field}`;
+            if (operator === 'LIKE') {
+              queryBuilder.andWhere(`contractor.${field} LIKE :${paramName}`, { [paramName]: `%${clause.value}%` });
+            } else if (operator === '=') {
+              queryBuilder.andWhere(`contractor.${field} = :${paramName}`, { [paramName]: clause.value });
+            } else if (operator === '!=') {
+              queryBuilder.andWhere(`contractor.${field} != :${paramName}`, { [paramName]: clause.value });
+            }
+          }
+        });
+
+        // Search in profile fields
+        const email = whereClause.find((p) => p.key === 'email');
+        if (email?.value) {
+          const operator = email.operator || 'LIKE';
+          if (operator === 'LIKE') {
+            queryBuilder.andWhere('profile.email LIKE :emailParam', { emailParam: `%${email.value}%` });
+          } else if (operator === '=') {
+            queryBuilder.andWhere('profile.email = :emailParam', { emailParam: email.value });
+          }
+        }
+
+        const user_name = whereClause.find((p) => p.key === 'user_name');
+        if (user_name?.value) {
+          const operator = user_name.operator || 'LIKE';
+          if (operator === 'LIKE') {
+            queryBuilder.andWhere('profile.user_name LIKE :userNameParam', { userNameParam: `%${user_name.value}%` });
+          } else if (operator === '=') {
+            queryBuilder.andWhere('profile.user_name = :userNameParam', { userNameParam: user_name.value });
+          }
+        }
+
+        // Date filtering
+        const created_on = whereClause.find((p: any) => p.key === 'created_on' && p.value);
+        if (created_on) {
+          const dateOnly = created_on.value.split(' ')[0];
+          queryBuilder.andWhere('DATE(contractor.created_on) = :createdOnDate', { createdOnDate: dateOnly });
+        }
+
+        // "all" search across multiple fields
+        const allValue = whereClause.find((p) => p.key === 'all')?.value;
+        if (allValue) {
+          queryBuilder.andWhere(
+            '(contractor.company_name LIKE :allValue1 OR profile.email LIKE :allValue2 OR profile.user_name LIKE :allValue3 OR contractor.contact_number LIKE :allValue4)',
+            {
+              allValue1: `%${allValue}%`,
+              allValue2: `%${allValue}%`,
+              allValue3: `%${allValue}%`,
+              allValue4: `%${allValue}%`,
+            }
+          );
+        }
+      }
+
+      const skip = (curPage - 1) * perPage;
+      const orderDirection = direction.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+      // Determine sort field
+      let orderByField = 'contractor.created_on';
+      if (sortBy === 'company_name') {
+        orderByField = 'contractor.company_name';
+      } else if (sortBy === 'email') {
+        orderByField = 'profile.email';
+      } else if (sortBy === 'status') {
+        orderByField = 'contractor.status';
+      } else if (sortBy === 'created_on') {
+        orderByField = 'contractor.created_on';
+      }
+
+      const [list, count] = await queryBuilder
+        .skip(skip)
+        .take(perPage)
+        .orderBy(orderByField, orderDirection)
+        .getManyAndCount();
+
+      return paginateResponse(list, count, curPage, perPage);
+    } catch (error) {
+      console.error('Error in contractors pagination:', error);
+      throw error;
+    }
   }
 
   async getContractorByUserId(userId: string) {

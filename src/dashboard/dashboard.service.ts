@@ -8,6 +8,7 @@ import { Vehicle } from '../entities/vehicle.entity';
 import { Profile } from '../entities/profile.entity';
 import { Session } from '../entities/session.entity';
 import { Payment } from '../entities/payment.entity';
+import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 
 @Injectable()
 export class DashboardService {
@@ -274,6 +275,175 @@ export class DashboardService {
     return activities
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, limit);
+  }
+
+  async getRecentActivityPaginated(pagination: IPagination): Promise<IPaginatedResponse<any>> {
+    try {
+      const { curPage, perPage, sortBy = 'timestamp', direction = 'desc', whereClause = [] } = pagination;
+      
+      // Validate pagination params
+      if (!curPage || curPage < 1) {
+        throw new Error('Invalid curPage: must be >= 1');
+      }
+      if (!perPage || perPage < 1) {
+        throw new Error('Invalid perPage: must be >= 1');
+      }
+
+      // Get all activities (we'll filter and paginate in memory since they come from multiple sources)
+      const maxLimit = Math.max(perPage * curPage, 1000); // Get enough data for pagination
+      
+      // Get recent vehicles
+      const recentVehicles = await this.vehicleRepository.find({
+        where: { is_deleted: false },
+        order: { created_on: 'DESC' },
+        take: maxLimit,
+        relations: ['parking_locations'],
+      });
+
+      // Get recent contractors
+      const recentContractors = await this.contractorRepository.find({
+        where: { is_deleted: false },
+        order: { created_on: 'DESC' },
+        take: 100,
+      });
+
+      // Get recent locations
+      const recentLocations = await this.locationRepository.find({
+        where: { is_deleted: false },
+        order: { created_on: 'DESC' },
+        take: 100,
+      });
+
+      // Get recent payments
+      const recentPayments = await this.paymentRepository.find({
+        where: { payment_status: 'completed' },
+        order: { created_at: 'DESC' },
+        take: 100,
+        relations: ['vehicles', 'parking_locations'],
+      });
+
+      const activities: any[] = [];
+
+      // Add vehicle activities
+      recentVehicles.forEach((vehicle) => {
+        if (!vehicle.check_out_time) {
+          activities.push({
+            id: `vehicle_checkin_${vehicle.id}`,
+            type: 'vehicle_checkin',
+            message: `New vehicle ${vehicle.plate_number} checked in at ${vehicle.parking_locations?.locations_name || 'Unknown Location'}`,
+            timestamp: vehicle.created_on.toISOString(),
+            metadata: {
+              vehicle_id: vehicle.id,
+              location_id: vehicle.location_id,
+              plate_number: vehicle.plate_number,
+            },
+          });
+        } else {
+          activities.push({
+            id: `vehicle_checkout_${vehicle.id}`,
+            type: 'vehicle_checkout',
+            message: `Vehicle ${vehicle.plate_number} checked out from ${vehicle.parking_locations?.locations_name || 'Unknown Location'}`,
+            timestamp: vehicle.updated_on.toISOString(),
+            metadata: {
+              vehicle_id: vehicle.id,
+              location_id: vehicle.location_id,
+              plate_number: vehicle.plate_number,
+            },
+          });
+        }
+      });
+
+      // Add payment activities
+      recentPayments.forEach((payment) => {
+        activities.push({
+          id: `payment_${payment.id}`,
+          type: 'payment_received',
+          message: `Payment of ₹${payment.amount} received for ${payment.vehicles?.plate_number || 'vehicle'}`,
+          timestamp: payment.created_at.toISOString(),
+          metadata: {
+            amount: payment.amount,
+            vehicle_id: payment.vehicle_id,
+            location_id: payment.location_id,
+          },
+        });
+      });
+
+      // Add location activities
+      recentLocations.forEach((location) => {
+        activities.push({
+          id: `location_${location.id}`,
+          type: 'location_created',
+          message: `New parking location "${location.locations_name}" added`,
+          timestamp: location.created_on.toISOString(),
+          metadata: {
+            location_id: location.id,
+          },
+        });
+      });
+
+      // Add contractor activities
+      recentContractors.forEach((contractor) => {
+        activities.push({
+          id: `contractor_${contractor.id}`,
+          type: 'contractor_registration',
+          message: `New contractor "${contractor.company_name}" registered`,
+          timestamp: contractor.created_on.toISOString(),
+          metadata: {
+            contractor_id: contractor.id,
+          },
+        });
+      });
+
+      // Apply filters from whereClause
+      let filteredActivities = activities;
+      if (whereClause && Array.isArray(whereClause) && whereClause.length > 0) {
+        whereClause.forEach((clause) => {
+          if (clause.key === 'type' && clause.value) {
+            const operator = clause.operator || '=';
+            if (operator === '=') {
+              filteredActivities = filteredActivities.filter((a) => a.type === clause.value);
+            } else if (operator === '!=') {
+              filteredActivities = filteredActivities.filter((a) => a.type !== clause.value);
+            }
+          } else if (clause.key === 'all' && clause.value) {
+            const searchTerm = clause.value.toLowerCase();
+            filteredActivities = filteredActivities.filter(
+              (a) =>
+                a.message.toLowerCase().includes(searchTerm) ||
+                a.type.toLowerCase().includes(searchTerm)
+            );
+          }
+        });
+      }
+
+      // Sort by timestamp or other fields
+      const sortField = sortBy === 'timestamp' ? 'timestamp' : sortBy;
+      const sortDirection = direction.toUpperCase() === 'ASC' ? 1 : -1;
+      
+      filteredActivities.sort((a, b) => {
+        let aValue: any = a[sortField];
+        let bValue: any = b[sortField];
+        
+        if (sortField === 'timestamp') {
+          aValue = new Date(a.timestamp).getTime();
+          bValue = new Date(b.timestamp).getTime();
+        }
+        
+        if (aValue < bValue) return -1 * sortDirection;
+        if (aValue > bValue) return 1 * sortDirection;
+        return 0;
+      });
+
+      // Paginate
+      const skip = (curPage - 1) * perPage;
+      const paginatedActivities = filteredActivities.slice(skip, skip + perPage);
+      const totalCount = filteredActivities.length;
+
+      return paginateResponse(paginatedActivities, totalCount, curPage, perPage);
+    } catch (error) {
+      console.error('Error in getRecentActivityPaginated:', error);
+      throw error;
+    }
   }
 
   async getSystemHealth() {

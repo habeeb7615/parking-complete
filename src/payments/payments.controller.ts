@@ -1,9 +1,11 @@
-import { Controller, Get, UseGuards, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, UseGuards, Param, Body, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaginationParams } from '../contractors/contractors.service';
+import { IPagination } from '../common/interfaces/pagination.interface';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { PaginationSchema } from '../common/schemas/pagination.schema';
 
 @ApiTags('payments')
 @Controller('payments')
@@ -22,19 +24,23 @@ export class PaymentsController {
     return this.paymentsService.getAllPayments();
   }
 
-  @Get('paginated')
+  @Post('paginated')
   @ApiOperation({ summary: 'Get payments with pagination', description: 'Retrieve payments with pagination, search, and sorting' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'sortBy', required: false, type: String, enum: ['created_at', 'amount', 'payment_method', 'payment_status'] })
-  @ApiQuery({ name: 'sortOrder', required: false, type: String, enum: ['asc', 'desc'] })
+  @ApiBody({ schema: PaginationSchema })
   @ApiStandardResponse({
     status: 200,
     description: 'Payments retrieved successfully',
   })
-  async getPaymentsPaginated(@Query() params: PaginationParams) {
-    return this.paymentsService.getPaymentsPaginated(params);
+  async getPaymentsPaginated(@Body() pagination: IPagination) {
+    return this.paymentsService.pagination(pagination);
+  }
+
+  @Post('pagination')
+  @ApiOperation({ summary: 'Get payments with pagination', description: 'Retrieve payments with advanced pagination and filtering' })
+  @ApiBody({ schema: PaginationSchema })
+  @ApiResponse({ status: 200, description: 'Payments retrieved successfully' })
+  async pagination(@Body() pagination: IPagination) {
+    return this.paymentsService.pagination(pagination);
   }
 
   @Get('contractor/:contractorId')

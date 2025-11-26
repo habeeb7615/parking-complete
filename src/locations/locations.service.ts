@@ -6,6 +6,7 @@ import { Vehicle } from '../entities/vehicle.entity';
 import { Attendant } from '../entities/attendant.entity';
 import { Contractor } from '../entities/contractor.entity';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
+import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 import { randomUUID } from 'crypto';
 
 export interface CreateLocationData {
@@ -152,6 +153,123 @@ export class LocationsService {
       pageSize,
       totalPages: Math.ceil(count / pageSize),
     };
+  }
+
+  async pagination(pagination: IPagination): Promise<IPaginatedResponse<any>> {
+    try {
+      const { curPage, perPage, sortBy = 'created_on', direction = 'desc', whereClause = [] } = pagination;
+      
+      // Validate pagination params
+      if (!curPage || curPage < 1) {
+        throw new Error('Invalid curPage: must be >= 1');
+      }
+      if (!perPage || perPage < 1) {
+        throw new Error('Invalid perPage: must be >= 1');
+      }
+
+      const queryBuilder = this.locationRepository
+        .createQueryBuilder('location')
+        .leftJoinAndSelect('location.contractors', 'contractor')
+        .where('location.is_deleted = :isDeleted', { isDeleted: false });
+
+      const fieldsToSearch = [
+        'locations_name',
+        'address',
+        'city',
+        'state',
+        'pincode',
+        'status',
+      ];
+
+      // Process whereClause conditions
+      if (whereClause && Array.isArray(whereClause) && whereClause.length > 0) {
+        fieldsToSearch.forEach((field) => {
+          const clause = whereClause.find((p) => p.key === field);
+          if (clause?.value) {
+            const operator = clause.operator || 'LIKE';
+            const paramName = `param_${field}`;
+            if (operator === 'LIKE') {
+              queryBuilder.andWhere(`location.${field} LIKE :${paramName}`, { [paramName]: `%${clause.value}%` });
+            } else if (operator === '=') {
+              queryBuilder.andWhere(`location.${field} = :${paramName}`, { [paramName]: clause.value });
+            } else if (operator === '!=') {
+              queryBuilder.andWhere(`location.${field} != :${paramName}`, { [paramName]: clause.value });
+            }
+          }
+        });
+
+        // Date filtering
+        const created_on = whereClause.find((p: any) => p.key === 'created_on' && p.value);
+        if (created_on) {
+          const dateOnly = created_on.value.split(' ')[0];
+          queryBuilder.andWhere('DATE(location.created_on) = :createdOnDate', { createdOnDate: dateOnly });
+        }
+
+        // "all" search across multiple fields
+        const allValue = whereClause.find((p) => p.key === 'all')?.value;
+        if (allValue) {
+          const conditions = fieldsToSearch
+            .map((field, index) => `location.${field} LIKE :allValue${index}`)
+            .join(' OR ');
+          const allParams = fieldsToSearch.reduce((acc, field, index) => {
+            acc[`allValue${index}`] = `%${allValue}%`;
+            return acc;
+          }, {} as Record<string, string>);
+          queryBuilder.andWhere(`(${conditions})`, allParams);
+        }
+      }
+
+      const skip = (curPage - 1) * perPage;
+      const orderDirection = direction.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+      // Determine sort field
+      let orderByField = 'location.created_on';
+      if (sortBy === 'locations_name') {
+        orderByField = 'location.locations_name';
+      } else if (sortBy === 'address') {
+        orderByField = 'location.address';
+      } else if (sortBy === 'status') {
+        orderByField = 'location.status';
+      } else if (sortBy === 'created_on') {
+        orderByField = 'location.created_on';
+      }
+
+      const [list, count] = await queryBuilder
+        .skip(skip)
+        .take(perPage)
+        .orderBy(orderByField, orderDirection)
+        .getManyAndCount();
+
+      // Calculate occupied slots for each location
+      const locationIds = list.map((loc) => loc.id);
+      let occupiedVehicles = [];
+      
+      if (locationIds.length > 0) {
+        occupiedVehicles = await this.vehicleRepository
+          .createQueryBuilder('vehicle')
+          .where('vehicle.location_id IN (:...locationIds)', { locationIds })
+          .andWhere('vehicle.check_out_time IS NULL')
+          .andWhere('vehicle.is_deleted = :isDeleted', { isDeleted: false })
+          .select(['vehicle.location_id'])
+          .getMany();
+      }
+
+      const occupiedByLocation = occupiedVehicles.reduce((acc, vehicle) => {
+        const locationId = vehicle.location_id;
+        acc[locationId] = (acc[locationId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const data = list.map((location) => ({
+        ...location,
+        occupied_slots: occupiedByLocation[location.id] || 0,
+      }));
+
+      return paginateResponse(data, count, curPage, perPage);
+    } catch (error) {
+      console.error('Error in locations pagination:', error);
+      throw error;
+    }
   }
 
   async getLocationById(id: string) {

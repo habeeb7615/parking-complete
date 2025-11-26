@@ -6,6 +6,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { IPagination } from '../common/interfaces/pagination.interface';
+import { PaginationSchema } from '../common/schemas/pagination.schema';
 
 @ApiTags('contractors')
 @Controller('contractors')
@@ -21,16 +23,20 @@ export class ContractorsController {
     return this.contractorsService.getAllContractors();
   }
 
-  @Get('paginated')
+  @Post('paginated')
   @ApiOperation({ summary: 'Get contractors with pagination', description: 'Retrieve contractors with pagination, search, and sorting' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'sortBy', required: false, type: String, enum: ['created_on', 'company_name', 'email', 'status'] })
-  @ApiQuery({ name: 'sortOrder', required: false, type: String, enum: ['asc', 'desc'] })
+  @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Contractors retrieved successfully' })
-  async getContractorsPaginated(@Query() params: PaginationParams) {
-    return this.contractorsService.getContractorsPaginated(params);
+  async getContractorsPaginated(@Body() pagination: IPagination) {
+    return this.contractorsService.pagination(pagination);
+  }
+
+  @Post('pagination')
+  @ApiOperation({ summary: 'Get contractors with pagination', description: 'Retrieve contractors with advanced pagination and filtering' })
+  @ApiBody({ schema: PaginationSchema })
+  @ApiResponse({ status: 200, description: 'Contractors retrieved successfully' })
+  async pagination(@Body() pagination: IPagination) {
+    return this.contractorsService.pagination(pagination);
   }
 
   @Get(':id')

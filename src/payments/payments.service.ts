@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
+import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 
 @Injectable()
 export class PaymentsService {
@@ -65,6 +66,88 @@ export class PaymentsService {
       pageSize,
       totalPages: Math.ceil(count / pageSize),
     };
+  }
+
+  async pagination(pagination: IPagination): Promise<IPaginatedResponse<Payment>> {
+    const { curPage, perPage, sortBy = 'created_at', direction = 'desc', whereClause } = pagination;
+    let lwhereClause = '1=1';
+
+    const fieldsToSearch = [
+      'payment_method',
+      'payment_status',
+    ];
+
+    fieldsToSearch.forEach((field) => {
+      const clause = whereClause.find((p) => p.key === field);
+      if (clause?.value) {
+        const operator = clause.operator || 'LIKE';
+        if (operator === 'LIKE') {
+          lwhereClause += ` AND payment.${field} LIKE '%${clause.value}%'`;
+        } else if (operator === '=') {
+          lwhereClause += ` AND payment.${field} = '${clause.value}'`;
+        } else if (operator === '!=') {
+          lwhereClause += ` AND payment.${field} != '${clause.value}'`;
+        }
+      }
+    });
+
+    // Search in vehicle fields
+    const plate_number = whereClause.find((p) => p.key === 'plate_number');
+    if (plate_number?.value) {
+      const operator = plate_number.operator || 'LIKE';
+      if (operator === 'LIKE') {
+        lwhereClause += ` AND vehicle.plate_number LIKE '%${plate_number.value}%'`;
+      } else if (operator === '=') {
+        lwhereClause += ` AND vehicle.plate_number = '${plate_number.value}'`;
+      }
+    }
+
+    // Date filtering
+    const created_at = whereClause.find((p: any) => p.key === 'created_at' && p.value);
+    if (created_at) {
+      const dateOnly = created_at.value.split(' ')[0];
+      lwhereClause += ` AND DATE(payment.created_at) = '${dateOnly}'`;
+    }
+
+    // "all" search across multiple fields
+    const allValue = whereClause.find((p) => p.key === 'all')?.value;
+    if (allValue) {
+      const conditions = [
+        `vehicle.plate_number LIKE '%${allValue}%'`,
+        `payment.payment_method LIKE '%${allValue}%'`,
+        `payment.payment_status LIKE '%${allValue}%'`,
+      ].join(' OR ');
+      lwhereClause += ` AND (${conditions})`;
+    }
+
+    const skip = (curPage - 1) * perPage;
+    const orderDirection = direction.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    // Determine sort field
+    let orderByField = 'payment.created_at';
+    if (sortBy === 'amount') {
+      orderByField = 'payment.amount';
+    } else if (sortBy === 'payment_method') {
+      orderByField = 'payment.payment_method';
+    } else if (sortBy === 'payment_status') {
+      orderByField = 'payment.payment_status';
+    } else if (sortBy === 'created_at') {
+      orderByField = 'payment.created_at';
+    }
+
+    const [list, count] = await this.paymentRepository
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.vehicles', 'vehicle')
+      .leftJoinAndSelect('payment.parking_locations', 'location')
+      .leftJoinAndSelect('payment.contractors', 'contractor')
+      .leftJoinAndSelect('payment.attendants', 'attendant')
+      .where(lwhereClause)
+      .skip(skip)
+      .take(perPage)
+      .orderBy(orderByField, orderDirection)
+      .getManyAndCount();
+
+    return paginateResponse(list, count, curPage, perPage);
   }
 
   async getContractorPayments(contractorId: string, params: PaginationParams = {}): Promise<PaginatedResponse<Payment>> {
