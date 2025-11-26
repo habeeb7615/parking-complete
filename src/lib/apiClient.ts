@@ -29,15 +29,16 @@ class ApiClient {
     // Normalize base URL - remove trailing slashes
     const normalizedURL = baseURL.trim().replace(/\/+$/, '');
     
-    // Only append /api for localhost (development)
+    // Only append /api for localhost (development) if URL doesn't contain /apitest
     // Production server (camsstaging.microlent.com/apitest) doesn't use /api prefix
     // Local: http://localhost:3000/api → stays as is (already has /api)
+    // Local with /apitest: http://localhost:3000/apitest → stays as is (no /api needed)
     // Live: https://camsstaging.microlent.com/apitest → stays as is (no /api needed)
-    if (normalizedURL.includes('localhost') || normalizedURL.includes('127.0.0.1')) {
-      // Local development: ensure /api is present
+    if ((normalizedURL.includes('localhost') || normalizedURL.includes('127.0.0.1')) && !normalizedURL.includes('/apitest')) {
+      // Local development: ensure /api is present (only if not using /apitest)
       this.baseURL = normalizedURL.endsWith('/api') ? normalizedURL : `${normalizedURL}/api`;
     } else {
-      // Production: use base URL as-is (no /api prefix)
+      // Production or /apitest paths: use base URL as-is (no /api prefix)
       this.baseURL = normalizedURL;
     }
   }
