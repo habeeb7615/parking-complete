@@ -92,8 +92,10 @@ export class AttendantsController {
   })
   @ApiResponse({ status: 201, description: 'Attendant created successfully' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Cannot create for other contractors' })
+  @ApiResponse({ status: 400, description: 'Bad Request - Limit exceeded' })
   async createAttendant(@Body() data: CreateAttendantData, @Request() req) {
-    return this.attendantsService.createAttendant(data, req.user?.id);
+    return this.attendantsService.createAttendant(data, req.user?.id, req.user?.role);
   }
 
   @Post('update/:id')

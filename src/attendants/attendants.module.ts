@@ -5,9 +5,10 @@ import { AttendantsService } from './attendants.service';
 import { Attendant } from '../entities/attendant.entity';
 import { Profile } from '../entities/profile.entity';
 import { Location } from '../entities/location.entity';
+import { Contractor } from '../entities/contractor.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Attendant, Profile, Location])],
+  imports: [TypeOrmModule.forFeature([Attendant, Profile, Location, Contractor])],
   controllers: [AttendantsController],
   providers: [AttendantsService],
   exports: [AttendantsService],

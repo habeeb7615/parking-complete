@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Location } from '../entities/location.entity';
 import { Vehicle } from '../entities/vehicle.entity';
 import { Attendant } from '../entities/attendant.entity';
 import { Contractor } from '../entities/contractor.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
 import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 import { randomUUID } from 'crypto';
@@ -352,7 +353,39 @@ export class LocationsService {
     }
   }
 
-  async createLocation(data: CreateLocationData, createdBy?: string): Promise<Location> {
+  async createLocation(data: CreateLocationData, createdBy?: string, userRole?: UserRole): Promise<Location> {
+    // If contractor is creating, validate limits and ensure they're creating for themselves
+    if (userRole === UserRole.CONTRACTOR && createdBy) {
+      // Get contractor by user_id
+      const contractor = await this.contractorRepository.findOne({
+        where: { user_id: createdBy, is_deleted: false },
+      });
+
+      if (!contractor) {
+        throw new ForbiddenException('Contractor not found');
+      }
+
+      // Ensure contractor is creating for themselves
+      if (data.contractor_id && data.contractor_id !== contractor.id) {
+        throw new ForbiddenException('You can only create locations for your own contractor account');
+      }
+
+      // Set contractor_id to the logged-in contractor's ID
+      data.contractor_id = contractor.id;
+
+      // Check location limit
+      const currentLocations = await this.locationRepository.count({
+        where: { contractor_id: contractor.id, is_deleted: false },
+      });
+
+      const allowedLocations = contractor.allowed_locations || 0;
+      if (currentLocations >= allowedLocations) {
+        throw new BadRequestException(
+          `You have reached the maximum limit of ${allowedLocations} locations. Please contact admin to increase your limit.`
+        );
+      }
+    }
+
     const locationId = randomUUID();
     const location = this.locationRepository.create({
       id: locationId,

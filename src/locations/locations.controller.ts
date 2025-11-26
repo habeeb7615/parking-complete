@@ -78,8 +78,10 @@ export class LocationsController {
     },
   })
   @ApiResponse({ status: 201, description: 'Location created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Cannot create for other contractors' })
+  @ApiResponse({ status: 400, description: 'Bad Request - Limit exceeded' })
   async createLocation(@Body() data: CreateLocationData, @Request() req) {
-    return this.locationsService.createLocation(data, req.user?.id);
+    return this.locationsService.createLocation(data, req.user?.id, req.user?.role);
   }
 
   @Post('update/:id')

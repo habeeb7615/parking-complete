@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Attendant } from '../entities/attendant.entity';
 import { Profile } from '../entities/profile.entity';
+import { Contractor } from '../entities/contractor.entity';
+import { Location } from '../entities/location.entity';
 import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -26,6 +28,10 @@ export class AttendantsService {
     private attendantRepository: Repository<Attendant>,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
+    @InjectRepository(Contractor)
+    private contractorRepository: Repository<Contractor>,
+    @InjectRepository(Location)
+    private locationRepository: Repository<Location>,
   ) {}
 
   async getAllAttendants() {
@@ -293,7 +299,7 @@ export class AttendantsService {
     };
   }
 
-  async createAttendant(data: CreateAttendantData, createdBy?: string): Promise<Attendant> {
+  async createAttendant(data: CreateAttendantData, createdBy?: string, userRole?: UserRole): Promise<Attendant> {
     // Check if email already exists
     const existingProfile = await this.profileRepository.findOne({
       where: { email: data.email, is_deleted: false },
@@ -301,6 +307,71 @@ export class AttendantsService {
 
     if (existingProfile) {
       throw new ConflictException('Email already exists');
+    }
+
+    // If contractor is creating, validate limits and ensure they're creating for themselves
+    if (userRole === UserRole.CONTRACTOR && createdBy) {
+      // Get contractor by user_id
+      const contractor = await this.contractorRepository.findOne({
+        where: { user_id: createdBy, is_deleted: false },
+      });
+
+      if (!contractor) {
+        throw new ForbiddenException('Contractor not found');
+      }
+
+      // Ensure contractor is creating for themselves
+      if (data.contractor_id && data.contractor_id !== contractor.id) {
+        throw new ForbiddenException('You can only create attendants for your own contractor account');
+      }
+
+      // Set contractor_id to the logged-in contractor's ID
+      data.contractor_id = contractor.id;
+
+      // If location_id is provided, verify it belongs to this contractor
+      if (data.location_id) {
+        const location = await this.locationRepository.findOne({
+          where: { id: data.location_id, contractor_id: contractor.id, is_deleted: false },
+        });
+
+        if (!location) {
+          throw new BadRequestException('Location does not belong to your contractor account');
+        }
+
+        // Check attendants per location limit
+        const attendantsAtLocation = await this.attendantRepository.count({
+          where: { location_id: data.location_id, is_deleted: false },
+        });
+
+        const allowedPerLocation = contractor.allowed_attendants_per_location || 0;
+        if (attendantsAtLocation >= allowedPerLocation) {
+          throw new BadRequestException(
+            `You have reached the maximum limit of ${allowedPerLocation} attendants for this location. Please contact admin to increase your limit.`
+          );
+        }
+      } else {
+        // If no location specified, check total attendants across all contractor's locations
+        const contractorLocations = await this.locationRepository.find({
+          where: { contractor_id: contractor.id, is_deleted: false },
+        });
+
+        const locationIds = contractorLocations.map(loc => loc.id);
+        if (locationIds.length > 0) {
+          const totalAttendants = await this.attendantRepository
+            .createQueryBuilder('attendant')
+            .where('attendant.location_id IN (:...locationIds)', { locationIds })
+            .andWhere('attendant.is_deleted = :isDeleted', { isDeleted: false })
+            .getCount();
+
+          // Calculate max allowed (locations * attendants_per_location)
+          const maxAllowed = contractorLocations.length * (contractor.allowed_attendants_per_location || 0);
+          if (totalAttendants >= maxAllowed) {
+            throw new BadRequestException(
+              `You have reached the maximum limit of attendants. Please contact admin to increase your limit.`
+            );
+          }
+        }
+      }
     }
 
     // Hash password
