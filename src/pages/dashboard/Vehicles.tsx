@@ -1102,6 +1102,7 @@ export default function Vehicles() {
           mobile_number: newVehicle.mobile_number,
           location: locations.find(loc => loc.id === newVehicle.location_id)
         }}
+        loading={loading}
       />
     </div>
   );

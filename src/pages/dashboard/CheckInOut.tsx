@@ -193,17 +193,40 @@ export default function CheckInOut() {
   }, [user]);
 
   const handleAddVehicle = async () => {
-    if (!newVehicle.plate_number || !newVehicle.vehicle_type) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "Please fill in all required fields.",
-      });
-      return;
-    }
-
+    // Set processing immediately to show loader
     setProcessing(true);
+    
     try {
+      // Validate required fields
+      if (!newVehicle.plate_number || !newVehicle.vehicle_type) {
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: "Please fill in all required fields.",
+        });
+        setProcessing(false);
+        return;
+      }
+
+      // Ensure location_id is set
+      if (!newVehicle.location_id && currentLocation?.id) {
+        setNewVehicle(prev => ({
+          ...prev,
+          location_id: currentLocation.id,
+          contractor_id: currentLocation.contractor_id || prev.contractor_id
+        }));
+      }
+
+      if (!newVehicle.location_id) {
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: "Location is required. Please select a location.",
+        });
+        setProcessing(false);
+        return;
+      }
+
       const vehicle = await VehicleAPI.createVehicle(newVehicle);
       setVehicles(prev => [vehicle, ...prev]);
       

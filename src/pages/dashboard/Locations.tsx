@@ -24,6 +24,7 @@ export default function Locations() {
   const [allLocations, setAllLocations] = useState<Location[]>([]); // contractor local cache
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Location | null>(null);
   const [contractors, setContractors] = useState<any[]>([]);
@@ -254,8 +255,11 @@ export default function Locations() {
 
   const save = async () => {
     try {
+      setSaving(true);
+      
       if (!form.locations_name || !form.address) {
         toast({ variant: "destructive", title: "Validation", description: "Please fill all required fields" });
+        setSaving(false);
         return;
       }
       
@@ -270,12 +274,14 @@ export default function Locations() {
           setForm({ ...form, contractor_id: contractorData.id });
         } else {
           toast({ variant: "destructive", title: "Error", description: "Contractor information not found. Please refresh the page." });
+          setSaving(false);
           return;
         }
       }
       
       if (!form.contractor_id) {
         toast({ variant: "destructive", title: "Validation", description: "Contractor is required" });
+        setSaving(false);
         return;
       }
       
@@ -294,6 +300,7 @@ export default function Locations() {
               title: "Limit Reached", 
               description: `You have reached the maximum limit of ${allowedCount} locations. Please contact admin to increase your limit.` 
             });
+            setSaving(false);
             return;
           }
         }
@@ -311,6 +318,8 @@ export default function Locations() {
       fetchData();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e?.message || "Failed to save" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -734,8 +743,17 @@ export default function Locations() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-            <Button onClick={save}>{editing ? "Update" : "Create"}</Button>
+            <Button variant="outline" onClick={() => setShowForm(false)} disabled={saving}>Cancel</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  {editing ? "Updating..." : "Creating..."}
+                </>
+              ) : (
+                editing ? "Update" : "Create"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

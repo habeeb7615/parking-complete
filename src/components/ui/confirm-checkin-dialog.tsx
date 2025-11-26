@@ -19,13 +19,15 @@ interface ConfirmCheckinDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   vehicle: Vehicle | null;
+  loading?: boolean;
 }
 
 export function ConfirmCheckinDialog({
   isOpen,
   onClose,
   onConfirm,
-  vehicle
+  vehicle,
+  loading = false
 }: ConfirmCheckinDialogProps) {
   if (!vehicle) {
     return null;
@@ -73,14 +75,22 @@ export function ConfirmCheckinDialog({
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-4">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
             <Button 
               onClick={onConfirm}
               className="bg-blue-600 hover:bg-blue-700"
+              disabled={loading}
             >
-              Confirm Check-in
+              {loading ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></span>
+                  Processing...
+                </>
+              ) : (
+                'Confirm Check-in'
+              )}
             </Button>
           </div>
         </div>
