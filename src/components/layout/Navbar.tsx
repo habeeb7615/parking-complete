@@ -67,8 +67,8 @@ export function Navbar({ onMobileMenuToggle }: NavbarProps) {
             <Car className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 text-parkflow-blue flex-shrink-0" />
             <h1 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-parkflow-blue truncate">ParkFlow</h1>
           </div>
-          <Badge className={`${getRoleColor(profile.role)} text-xs sm:text-sm hidden sm:inline-flex flex-shrink-0`}>
-            {getRoleLabel(profile.role)}
+          <Badge className={`${getRoleColor(profile.role || '')} text-xs sm:text-sm hidden sm:inline-flex flex-shrink-0`}>
+            {getRoleLabel(profile.role || '')}
           </Badge>
         </div>
 
@@ -118,9 +118,9 @@ export function Navbar({ onMobileMenuToggle }: NavbarProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 rounded-full">
                 <Avatar className="h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10">
-                  <AvatarImage src="" alt={profile.user_name} />
+                  <AvatarImage src="" alt={profile.user_name || profile.email || 'User'} />
                   <AvatarFallback className="bg-parkflow-blue text-white text-xs sm:text-sm">
-                    {profile.user_name.charAt(0).toUpperCase()}
+                    {(profile.user_name || profile.email || 'U').charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -128,10 +128,10 @@ export function Navbar({ onMobileMenuToggle }: NavbarProps) {
             <DropdownMenuContent className="w-48 sm:w-56" align="end">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-xs sm:text-sm font-medium leading-none truncate">{profile.user_name}</p>
-                  <p className="text-xs leading-none text-muted-foreground truncate">{profile.email}</p>
-                  <Badge className={`${getRoleColor(profile.role)} w-fit mt-2 text-xs`} variant="secondary">
-                    {getRoleLabel(profile.role)}
+                  <p className="text-xs sm:text-sm font-medium leading-none truncate">{profile.user_name || profile.email || 'User'}</p>
+                  <p className="text-xs leading-none text-muted-foreground truncate">{profile.email || 'No email'}</p>
+                  <Badge className={`${getRoleColor(profile.role || '')} w-fit mt-2 text-xs`} variant="secondary">
+                    {getRoleLabel(profile.role || '')}
                   </Badge>
                 </div>
               </DropdownMenuLabel>

@@ -12,6 +12,7 @@ import { MapPin, Plus, Car, Users, Banknote, Edit, Trash2, Search, ArrowUpDown }
 import { useToast } from "@/hooks/use-toast";
 import { LocationAPI, type Location, type CreateLocationData, type PaginatedResponse, type PaginationParams } from "@/services/locationApi";
 import { SuperAdminAPI } from "@/services/superAdminApi";
+import { ContractorAPI } from "@/services/contractorApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 
@@ -25,6 +26,7 @@ export default function Locations() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Location | null>(null);
   const [contractors, setContractors] = useState<any[]>([]);
+  const [contractorData, setContractorData] = useState<any>(null); // For contractor limit checking
   const [form, setForm] = useState<Partial<CreateLocationData>>({
     locations_name: "",
     address: "",
@@ -55,6 +57,19 @@ export default function Locations() {
     return { totalLocations, totalSlots, occupied, rate };
   }, [locations, pagination.totalCount]);
 
+  // Get contractor data from localStorage or state
+  const currentContractor = useMemo(() => {
+    if (isContractor && user) {
+      try {
+        const { AuthAPI } = require('@/services/authApi');
+        return AuthAPI.getContractor() || contractorData;
+      } catch {
+        return contractorData;
+      }
+    }
+    return contractorData;
+  }, [isContractor, user, contractorData]);
+
   const fetchData = async (page = pagination.page, searchTerm = search, sort = sortBy, order = sortOrder) => {
     try {
       setLoading(true);
@@ -83,10 +98,32 @@ export default function Locations() {
         const userId = user.id;
         console.log('Fetching locations for contractor user:', userId);
         
+        // Try to get contractor data from localStorage first
+        const { AuthAPI } = await import('@/services/authApi');
+        let contractor = AuthAPI.getContractor();
+        
+        // If not in localStorage, fetch it
+        if (!contractor) {
+          try {
+            contractor = await ContractorAPI.getContractorByUserId(userId);
+            if (contractor) {
+              AuthAPI.setContractor(contractor);
+            }
+          } catch (error) {
+            console.error('Failed to fetch contractor data:', error);
+            contractor = null;
+          }
+        } else {
+          // Update state with localStorage data
+          setContractorData(contractor);
+        }
+        
         const result = await LocationAPI.getContractorLocations(userId);
         console.log('Contractor locations result:', result);
+        console.log('Contractor data:', contractor);
         
         setAllLocations(result);
+        setContractorData(contractor);
         applyLocalFilters(result, page, searchTerm, sort, order);
       } else {
         // default fallback (attendant/no role) - show empty list
@@ -156,11 +193,49 @@ export default function Locations() {
     else applyLocalFilters(allLocations, 1, search, sortBy, sortOrder);
   };
 
-  const openCreate = () => {
+  const openCreate = async () => {
     setEditing(null);
-    setForm({ locations_name: "", address: "", total_slots: 0, contractor_id: "", status: "active" });
-    // Refresh contractor list to ensure it's up to date when opening the form
-    SuperAdminAPI.getAllContractors().then(setContractors).catch(() => {});
+    
+    // For contractors, get contractor_id from localStorage
+    let initialContractorId = "";
+    if (isContractor && user) {
+      // Try to get from localStorage first
+      const { AuthAPI } = await import('@/services/authApi');
+      const storedContractor = AuthAPI.getContractor();
+      
+      if (storedContractor && storedContractor.id) {
+        initialContractorId = storedContractor.id;
+        setContractorData(storedContractor);
+      } else if (contractorData && contractorData.id) {
+        // Fallback to state if localStorage doesn't have it
+        initialContractorId = contractorData.id;
+      } else {
+        // Fetch if not available
+        try {
+          const contractor = await ContractorAPI.getContractorByUserId(user.id);
+          if (contractor && contractor.id) {
+            initialContractorId = contractor.id;
+            setContractorData(contractor);
+          }
+        } catch (error) {
+          console.error('Failed to fetch contractor data:', error);
+        }
+      }
+    }
+    
+    setForm({ 
+      locations_name: "", 
+      address: "", 
+      total_slots: 0, 
+      contractor_id: initialContractorId, 
+      status: "active" 
+    });
+    
+    // Refresh contractor list for super admin
+    if (isSuperAdmin) {
+      SuperAdminAPI.getAllContractors().then(setContractors).catch(() => {});
+    }
+    
     setShowForm(true);
   };
 
@@ -178,10 +253,51 @@ export default function Locations() {
 
   const save = async () => {
     try {
-      if (!form.locations_name || !form.address || !form.contractor_id) {
+      if (!form.locations_name || !form.address) {
         toast({ variant: "destructive", title: "Validation", description: "Please fill all required fields" });
         return;
       }
+      
+      // For contractors, ensure contractor_id is set from localStorage
+      if (isContractor && user && !form.contractor_id) {
+        const { AuthAPI } = await import('@/services/authApi');
+        const storedContractor = AuthAPI.getContractor();
+        
+        if (storedContractor && storedContractor.id) {
+          setForm({ ...form, contractor_id: storedContractor.id });
+        } else if (contractorData && contractorData.id) {
+          setForm({ ...form, contractor_id: contractorData.id });
+        } else {
+          toast({ variant: "destructive", title: "Error", description: "Contractor information not found. Please refresh the page." });
+          return;
+        }
+      }
+      
+      if (!form.contractor_id) {
+        toast({ variant: "destructive", title: "Validation", description: "Contractor is required" });
+        return;
+      }
+      
+      // Check limit for contractors before creating
+      if (isContractor && user && !editing) {
+        // Get contractor data from localStorage or state
+        const { AuthAPI } = await import('@/services/authApi');
+        const storedContractor = AuthAPI.getContractor() || contractorData;
+        
+        if (storedContractor) {
+          const currentCount = allLocations.length;
+          const allowedCount = storedContractor.allowed_locations || 0;
+          if (currentCount >= allowedCount) {
+            toast({ 
+              variant: "destructive", 
+              title: "Limit Reached", 
+              description: `You have reached the maximum limit of ${allowedCount} locations. Please contact admin to increase your limit.` 
+            });
+            return;
+          }
+        }
+      }
+      
       if (editing) {
         await LocationAPI.updateLocation(editing.id, form as CreateLocationData);
         toast({ title: "Updated", description: "Location updated" });
@@ -217,7 +333,7 @@ export default function Locations() {
             Manage parking sites and their configurations
           </p>
         </div>
-        {isSuperAdmin && (
+        {(isSuperAdmin || isContractor) && (
         <Button onClick={openCreate} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Location
@@ -308,19 +424,11 @@ export default function Locations() {
                 }
               </p>
               
-              {isSuperAdmin && (
+              {(isSuperAdmin || isContractor) && (
                 <Button onClick={openCreate} size="lg">
                   <Plus className="h-5 w-5 mr-2" />
                   Add First Location
                 </Button>
-              )}
-              
-              {isContractor && (
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Contact your administrator to assign parking locations to your account.
-                  </p>
-                </div>
               )}
             </div>
           ) : (
@@ -528,12 +636,22 @@ export default function Locations() {
         </CardContent>
       </Card>
 
-      {isSuperAdmin && (
+      {(isSuperAdmin || isContractor) && (
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="w-[95vw] sm:w-full max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">{editing ? "Edit Location" : "Add Location"}</DialogTitle>
-            <DialogDescription className="text-sm">Configure parking location details</DialogDescription>
+            <DialogDescription className="text-sm">
+              {editing ? "Update parking location details" : "Configure parking location details"}
+              {isContractor && currentContractor && !editing && (
+                <span className="block mt-1 text-xs">
+                  Locations: {allLocations.length} / {currentContractor.allowed_locations || 0} used
+                  {allLocations.length >= (currentContractor.allowed_locations || 0) && (
+                    <span className="text-red-500 ml-2">(Limit reached)</span>
+                  )}
+                </span>
+              )}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
@@ -548,25 +666,37 @@ export default function Locations() {
               <Label htmlFor="address">Address</Label>
               <Input id="address" value={form.address || ""} onChange={e => setForm({ ...form, address: e.target.value })} />
             </div>
-            <div className="space-y-2">
-              <Label>Contractor</Label>
-              <Select value={form.contractor_id || ""} onValueChange={(v) => setForm({ ...form, contractor_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select contractor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contractors.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No contractors found</div>
-                  ) : (
-                    contractors.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.company_name || c.profiles?.user_name || c.profiles?.email}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+            {isSuperAdmin && (
+              <div className="space-y-2">
+                <Label>Contractor</Label>
+                <Select value={form.contractor_id || ""} onValueChange={(v) => setForm({ ...form, contractor_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select contractor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contractors.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No contractors found</div>
+                    ) : (
+                      contractors.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.company_name || c.profiles?.user_name || c.profiles?.email}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {isContractor && currentContractor && (
+              <div className="space-y-2">
+                <Label>Contractor</Label>
+                <Input 
+                  value={currentContractor.company_name || currentContractor.profiles?.user_name || "Your Account"} 
+                  disabled 
+                  className="bg-muted"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={form.status || "active"} onValueChange={(v) => setForm({ ...form, status: v })}>

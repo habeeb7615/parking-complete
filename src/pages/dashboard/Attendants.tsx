@@ -13,18 +13,21 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { useToast } from "@/hooks/use-toast";
 import { AttendantAPI, type Attendant, type CreateAttendantData, type PaginatedResponse, type PaginationParams } from "@/services/attendantApi";
 import { SuperAdminAPI } from "@/services/superAdminApi";
+import { ContractorAPI } from "@/services/contractorApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocationAPI } from "@/services/locationApi";
 
 const Attendants = memo(function Attendants() {
   const { profile, user } = useAuth();
   const isSuperAdmin = profile?.role === "super_admin";
+  const isContractor = profile?.role === "contractor";
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Attendant | null>(null);
   const [contractors, setContractors] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [contractorData, setContractorData] = useState<any>(null); // For contractor limit checking
   const [formLoading, setFormLoading] = useState(false);
   const [form, setForm] = useState<Partial<CreateAttendantData>>({
     user_name: "",
@@ -83,7 +86,29 @@ const Attendants = memo(function Attendants() {
       // Use different API based on user role
       if (profile?.role === 'contractor' && user?.id) {
         // For contractors, only show attendants assigned to their locations
-        attendantsResult = await AttendantAPI.getAttendantsByContractor(user.id, params);
+        // Try to get contractor data from localStorage first
+        const { AuthAPI } = await import('@/services/authApi');
+        let contractor = AuthAPI.getContractor();
+        
+        // If not in localStorage, fetch it
+        if (!contractor) {
+          try {
+            contractor = await ContractorAPI.getContractorByUserId(user.id);
+            if (contractor) {
+              AuthAPI.setContractor(contractor);
+            }
+          } catch (error) {
+            console.error('Failed to fetch contractor data:', error);
+            contractor = null;
+          }
+        } else {
+          // Update state with localStorage data
+          setContractorData(contractor);
+        }
+        
+        const attendantsData = await AttendantAPI.getAttendantsByContractor(user.id, params);
+        attendantsResult = attendantsData;
+        setContractorData(contractor);
       } else if (profile?.role === 'attendant' && user?.id) {
         // For attendants, only show their own information
         attendantsResult = await AttendantAPI.getAttendantByUserId(user.id);
@@ -100,10 +125,20 @@ const Attendants = memo(function Attendants() {
         attendantsResult = await AttendantAPI.getAllAttendants(params);
       }
       
-      const [cons, locs] = await Promise.all([
-        SuperAdminAPI.getAllContractors(),
-        LocationAPI.getAllLocations(),
-      ]);
+      // Fetch contractors and locations based on role
+      let consPromise, locsPromise;
+      
+      if (isContractor && user?.id) {
+        // For contractors, only fetch their own locations
+        consPromise = Promise.resolve([]); // Contractors don't need contractor list
+        locsPromise = LocationAPI.getContractorLocations(user.id);
+      } else {
+        // For super admin, fetch all
+        consPromise = SuperAdminAPI.getAllContractors();
+        locsPromise = LocationAPI.getAllLocations();
+      }
+      
+      const [cons, locs] = await Promise.all([consPromise, locsPromise]);
       
       console.log('Attendants result:', attendantsResult);
       console.log('Contractors:', cons);
@@ -175,15 +210,43 @@ const Attendants = memo(function Attendants() {
     fetchData(1, search, sortBy, sortOrder);
   };
 
-  const openCreate = () => {
+  const openCreate = async () => {
     setEditing(null);
+    
+    // For contractors, get contractor_id from localStorage
+    let initialContractorId = "";
+    if (isContractor && user) {
+      // Try to get from localStorage first
+      const { AuthAPI } = await import('@/services/authApi');
+      const storedContractor = AuthAPI.getContractor();
+      
+      if (storedContractor && storedContractor.id) {
+        initialContractorId = storedContractor.id;
+        setContractorData(storedContractor);
+      } else if (contractorData && contractorData.id) {
+        // Fallback to state if localStorage doesn't have it
+        initialContractorId = contractorData.id;
+      } else {
+        // Fetch if not available
+        try {
+          const contractor = await ContractorAPI.getContractorByUserId(user.id);
+          if (contractor && contractor.id) {
+            initialContractorId = contractor.id;
+            setContractorData(contractor);
+          }
+        } catch (error) {
+          console.error('Failed to fetch contractor data:', error);
+        }
+      }
+    }
+    
     setForm({ 
       user_name: "", 
       email: "", 
       password: "", 
       phone_number: "", 
       location_id: "none", 
-      contractor_id: "",
+      contractor_id: initialContractorId,
       status: "active"
     });
     setShowForm(true);
@@ -205,8 +268,28 @@ const Attendants = memo(function Attendants() {
 
   const save = async () => {
     try {
-      if (!form.user_name || !form.email || !form.contractor_id) {
+      if (!form.user_name || !form.email) {
         toast({ variant: "destructive", title: "Validation", description: "Please fill all required fields" });
+        return;
+      }
+      
+      // For contractors, ensure contractor_id is set from localStorage
+      if (isContractor && user && !form.contractor_id) {
+        const { AuthAPI } = await import('@/services/authApi');
+        const storedContractor = AuthAPI.getContractor();
+        
+        if (storedContractor && storedContractor.id) {
+          setForm({ ...form, contractor_id: storedContractor.id });
+        } else if (contractorData && contractorData.id) {
+          setForm({ ...form, contractor_id: contractorData.id });
+        } else {
+          toast({ variant: "destructive", title: "Error", description: "Contractor information not found. Please refresh the page." });
+          return;
+        }
+      }
+      
+      if (!form.contractor_id) {
+        toast({ variant: "destructive", title: "Validation", description: "Contractor is required" });
         return;
       }
       
@@ -218,6 +301,27 @@ const Attendants = memo(function Attendants() {
         location_id: form.location_id === "none" ? "" : form.location_id
       };
       
+      // Check limit for contractors before creating (if location is specified)
+      if (isContractor && user && !editing && formData.location_id) {
+        // Get contractor data from localStorage or state
+        const { AuthAPI } = await import('@/services/authApi');
+        const storedContractor = AuthAPI.getContractor() || contractorData;
+        
+        if (storedContractor) {
+          const attendantsAtLocation = attendants.filter(a => a.location_id === formData.location_id).length;
+          const allowedPerLocation = storedContractor.allowed_attendants_per_location || 0;
+          if (attendantsAtLocation >= allowedPerLocation) {
+            toast({ 
+              variant: "destructive", 
+              title: "Limit Reached", 
+              description: `You have reached the maximum limit of ${allowedPerLocation} attendants per location. Please contact admin to increase your limit.` 
+            });
+            setFormLoading(false);
+            return;
+          }
+        }
+      }
+      
       if (editing) {
         console.log('Updating attendant with data:', formData);
         const updatedAttendant = await SuperAdminAPI.updateAttendant(editing.id, formData as CreateAttendantData);
@@ -226,6 +330,7 @@ const Attendants = memo(function Attendants() {
       } else {
         if (!form.password) {
           toast({ variant: "destructive", title: "Validation", description: "Password is required for new attendants" });
+          setFormLoading(false);
           return;
         }
         console.log('Creating attendant with data:', formData);
@@ -254,11 +359,28 @@ const Attendants = memo(function Attendants() {
     }
   };
 
+  // Get contractor data from localStorage or state
+  const currentContractor = useMemo(() => {
+    if (isContractor && user) {
+      try {
+        const { AuthAPI } = require('@/services/authApi');
+        return AuthAPI.getContractor() || contractorData;
+      } catch {
+        return contractorData;
+      }
+    }
+    return contractorData;
+  }, [isContractor, user, contractorData]);
+
   // Filter locations by selected contractor
   const filteredLocations = useMemo(() => {
+    if (isContractor && currentContractor) {
+      // For contractors, only show their own locations
+      return locations.filter(loc => loc.contractor_id === currentContractor.id);
+    }
     if (!form.contractor_id) return [];
     return locations.filter(loc => loc.contractor_id === form.contractor_id);
-  }, [form.contractor_id, locations]);
+  }, [form.contractor_id, locations, isContractor, currentContractor]);
 
   return (
     <div className="space-y-6">
@@ -273,7 +395,7 @@ const Attendants = memo(function Attendants() {
             }
           </p>
         </div>
-        {isSuperAdmin && (
+        {(isSuperAdmin || isContractor) && (
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Add Attendant
@@ -391,7 +513,7 @@ const Attendants = memo(function Attendants() {
               {!isSuperAdmin && (
                 <p className="text-muted-foreground">Your account has no attendants yet.</p>
               )}
-              {isSuperAdmin && (
+              {(isSuperAdmin || isContractor) && (
                 <>
                   <p className="text-muted-foreground mb-4">Get started by adding your first attendant</p>
                   <Button onClick={openCreate}>
@@ -547,6 +669,17 @@ const Attendants = memo(function Attendants() {
             <DialogTitle>{editing ? "Edit Attendant" : "Add Attendant"}</DialogTitle>
             <DialogDescription>
               {editing ? "Update attendant information" : "Create a new attendant account"}
+              {isContractor && currentContractor && !editing && form.location_id && form.location_id !== "none" && (() => {
+                const attendantsAtLocation = attendants.filter(a => a.location_id === form.location_id).length;
+                return (
+                  <span className="block mt-1 text-xs">
+                    Attendants at this location: {attendantsAtLocation} / {currentContractor.allowed_attendants_per_location || 0} allowed
+                    {attendantsAtLocation >= (currentContractor.allowed_attendants_per_location || 0) && (
+                      <span className="text-red-500 ml-2">(Limit reached for this location)</span>
+                    )}
+                  </span>
+                );
+              })()}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -590,25 +723,37 @@ const Attendants = memo(function Attendants() {
                 />
               </div>
             )}
-            <div className="space-y-2 md:col-span-2">
-              <Label>Contractor *</Label>
-              <Select value={form.contractor_id || ""} onValueChange={(value) => setForm({ ...form, contractor_id: value, location_id: "" })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select contractor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contractors.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No contractors found</div>
-                  ) : (
-                    contractors.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.company_name || c.profiles?.user_name || c.profiles?.email}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+            {isSuperAdmin && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Contractor *</Label>
+                <Select value={form.contractor_id || ""} onValueChange={(value) => setForm({ ...form, contractor_id: value, location_id: "" })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select contractor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contractors.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No contractors found</div>
+                    ) : (
+                      contractors.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.company_name || c.profiles?.user_name || c.profiles?.email}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {isContractor && currentContractor && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Contractor</Label>
+                <Input 
+                  value={currentContractor.company_name || currentContractor.profiles?.user_name || "Your Account"} 
+                  disabled 
+                  className="bg-muted"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Assigned Location</Label>
               <Select value={form.location_id || "none"} onValueChange={(value) => setForm({ ...form, location_id: value === "none" ? "" : value })}>

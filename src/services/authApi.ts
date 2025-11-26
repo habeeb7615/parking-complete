@@ -30,6 +30,9 @@ export interface Profile {
 export class AuthAPI {
   private static readonly TOKEN_KEY = 'auth_token';
   private static readonly USER_KEY = 'auth_user';
+  private static readonly PROFILE_KEY = 'auth_profile';
+  private static readonly CONTRACTOR_KEY = 'auth_contractor';
+  private static readonly ATTENDANT_KEY = 'auth_attendant';
 
   /**
    * Store authentication token in localStorage
@@ -49,8 +52,29 @@ export class AuthAPI {
    * Remove authentication token from localStorage
    */
   static removeToken(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
+    try {
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem(this.USER_KEY);
+      localStorage.removeItem(this.PROFILE_KEY);
+      localStorage.removeItem(this.CONTRACTOR_KEY);
+      localStorage.removeItem(this.ATTENDANT_KEY);
+      console.log('All authentication data cleared from localStorage');
+    } catch (error) {
+      console.error('Error clearing localStorage:', error);
+      // Try to clear all at once as fallback
+      try {
+        localStorage.clear();
+      } catch (clearError) {
+        console.error('Error clearing all localStorage:', clearError);
+      }
+    }
+  }
+
+  /**
+   * Clear all authentication data (alias for removeToken for clarity)
+   */
+  static clearAllAuthData(): void {
+    this.removeToken();
   }
 
   /**
@@ -66,6 +90,51 @@ export class AuthAPI {
   static getUser(): LoginResponse['user'] | null {
     const userStr = localStorage.getItem(this.USER_KEY);
     return userStr ? JSON.parse(userStr) : null;
+  }
+
+  /**
+   * Store profile data in localStorage
+   */
+  static setProfile(profile: Profile): void {
+    localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profile));
+  }
+
+  /**
+   * Get profile data from localStorage
+   */
+  static getProfile(): Profile | null {
+    const profileStr = localStorage.getItem(this.PROFILE_KEY);
+    return profileStr ? JSON.parse(profileStr) : null;
+  }
+
+  /**
+   * Store contractor data in localStorage
+   */
+  static setContractor(contractor: any): void {
+    localStorage.setItem(this.CONTRACTOR_KEY, JSON.stringify(contractor));
+  }
+
+  /**
+   * Get contractor data from localStorage
+   */
+  static getContractor(): any | null {
+    const contractorStr = localStorage.getItem(this.CONTRACTOR_KEY);
+    return contractorStr ? JSON.parse(contractorStr) : null;
+  }
+
+  /**
+   * Store attendant data in localStorage
+   */
+  static setAttendant(attendant: any): void {
+    localStorage.setItem(this.ATTENDANT_KEY, JSON.stringify(attendant));
+  }
+
+  /**
+   * Get attendant data from localStorage
+   */
+  static getAttendant(): any | null {
+    const attendantStr = localStorage.getItem(this.ATTENDANT_KEY);
+    return attendantStr ? JSON.parse(attendantStr) : null;
   }
 
   /**

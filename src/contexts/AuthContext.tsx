@@ -57,6 +57,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const data = await AuthAPI.getProfileById(userId);
 
       if (data) {
+        // Save profile to localStorage
+        AuthAPI.setProfile(data as Profile);
+        
         // Check subscription validity for contractors
         if (data.role === 'contractor') {
           const now = new Date();
@@ -77,6 +80,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               title: "Subscription Expired",
               description: message,
             });
+          }
+          
+          // Fetch and save contractor data
+          try {
+            const { ContractorAPI } = await import('@/services/contractorApi');
+            const contractor = await ContractorAPI.getContractorByUserId(userId);
+            if (contractor) {
+              AuthAPI.setContractor(contractor);
+            }
+          } catch (error) {
+            console.error('Failed to fetch contractor data:', error);
+          }
+        } else if (data.role === 'attendant') {
+          // Fetch and save attendant data
+          try {
+            const { AttendantAPI } = await import('@/services/attendantApi');
+            const attendant = await AttendantAPI.getAttendantByUserId(userId);
+            if (attendant) {
+              AuthAPI.setAttendant(attendant);
+            }
+          } catch (error) {
+            console.error('Failed to fetch attendant data:', error);
           }
         }
         
@@ -113,21 +138,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession({ access_token: token });
           setUser(storedUser);
           
-          // Try to fetch real profile
+          // Try to load profile from localStorage first
+          const storedProfile = AuthAPI.getProfile();
+          if (storedProfile) {
+            console.log('AuthProvider: Found stored profile');
+            setProfile(storedProfile);
+            
+            // Load role-specific data if available
+            if (storedProfile.role === 'contractor') {
+              const storedContractor = AuthAPI.getContractor();
+              if (storedContractor) {
+                console.log('AuthProvider: Found stored contractor data');
+              }
+            } else if (storedProfile.role === 'attendant') {
+              const storedAttendant = AuthAPI.getAttendant();
+              if (storedAttendant) {
+                console.log('AuthProvider: Found stored attendant data');
+              }
+            }
+          }
+          
+          // Try to fetch real profile to ensure it's up to date
           try {
             await fetchProfile(storedUser.id);
           } catch (error) {
-            console.error('AuthProvider: Failed to fetch profile, using stored user data');
-            // Create a temporary profile from stored user
-            const tempProfile: Profile = {
-              id: storedUser.id,
-              user_name: storedUser.user_name,
-              email: storedUser.email,
-              role: storedUser.role as Profile['role'],
-              status: 'active',
-              is_first_login: false,
-            };
-            setProfile(tempProfile);
+            console.error('AuthProvider: Failed to fetch profile, using stored data', error);
+            // If no stored profile, create a temporary one from stored user
+            if (!storedProfile) {
+              const tempProfile: Profile = {
+                id: storedUser.id,
+                user_name: storedUser.user_name || storedUser.email || 'User',
+                email: storedUser.email || '',
+                role: storedUser.role as Profile['role'],
+                status: 'active',
+                is_first_login: false,
+              };
+              setProfile(tempProfile);
+              AuthAPI.setProfile(tempProfile);
+            } else {
+              // Use stored profile if fetch fails
+              setProfile(storedProfile);
+            }
           }
         } else {
           console.log('AuthProvider: No existing session found');
@@ -193,8 +244,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Try to fetch real profile
       try {
         console.log('SignIn: Fetching profile');
-        await fetchProfile(loginResponse.user.id);
+        const profileResult = await fetchProfile(loginResponse.user.id);
         console.log('SignIn: Profile fetched successfully');
+        
+        // Profile is already saved in fetchProfile, but ensure it's set in state
+        if (profileResult.data) {
+          setProfile(profileResult.data as Profile);
+        }
       } catch (error) {
         console.log('SignIn: Profile fetch failed, using user data');
         // Create a temporary profile from user data
@@ -207,6 +263,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           is_first_login: false,
         };
         setProfile(tempProfile);
+        AuthAPI.setProfile(tempProfile);
       }
 
       // Device restriction for attendants (async, non-blocking)
@@ -310,44 +367,66 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      console.log('SignOut: Starting logout process...');
+      
       // Clear device fingerprint for attendants
       if (profile?.role === 'attendant' && user) {
         try {
           const { AttendantAPI } = await import('@/services/attendantApi');
           await AttendantAPI.updateDeviceFingerprint(user.id, '');
-          console.log('Device fingerprint cleared on logout');
+          console.log('SignOut: Device fingerprint cleared on logout');
         } catch (error) {
-          console.error('Failed to clear device fingerprint:', error);
+          console.error('SignOut: Failed to clear device fingerprint:', error);
+          // Continue with logout even if this fails
         }
       }
 
-      // Clear token and user data from localStorage
-      AuthAPI.removeToken();
+      // Clear all authentication data from localStorage
+      console.log('SignOut: Clearing all localStorage data...');
+      AuthAPI.clearAllAuthData();
 
       // Clear local state
       setUser(null);
       setProfile(null);
       setSession(null);
       
+      console.log('SignOut: All data cleared successfully');
+      
       toast({
         title: "Signed Out",
         description: "You have been signed out successfully",
       });
       
-      // Redirect to home
-      window.location.href = '/';
+      // Small delay to ensure localStorage is cleared before redirect
+      setTimeout(() => {
+        // Redirect to home
+        window.location.href = '/';
+      }, 100);
       
     } catch (error) {
       console.error('SignOut error:', error);
       // Clear everything even if there's an error
-      AuthAPI.removeToken();
+      try {
+        AuthAPI.clearAllAuthData();
+      } catch (clearError) {
+        console.error('SignOut: Error clearing localStorage:', clearError);
+        // Last resort: clear all localStorage
+        try {
+          localStorage.clear();
+        } catch (finalError) {
+          console.error('SignOut: Failed to clear localStorage completely:', finalError);
+        }
+      }
+      
       setUser(null);
       setProfile(null);
       setSession(null);
+      
       toast({
         title: "Signed Out",
         description: "You have been signed out successfully",
       });
+      
       window.location.href = '/';
     }
   };
@@ -402,6 +481,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (response.data) {
         setProfile(response.data);
+        // Save updated profile to localStorage
+        AuthAPI.setProfile(response.data);
         toast({
           title: "Profile Updated",
           description: "Your profile has been updated successfully",
