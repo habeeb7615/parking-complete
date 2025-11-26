@@ -47,7 +47,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // Global prefix
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('apitest');
 
   // Swagger Configuration
   const config = new DocumentBuilder()
