@@ -37,7 +37,7 @@ export class AttendantsService {
   async getAllAttendants() {
     return this.attendantRepository.find({
       where: { is_deleted: false },
-      relations: ['profiles', 'parking_locations'],
+      relations: ['profiles', 'parking_locations', 'parking_locations.contractors'],
       order: { created_on: 'DESC' },
     });
   }
@@ -58,6 +58,7 @@ export class AttendantsService {
       .createQueryBuilder('attendant')
       .leftJoinAndSelect('attendant.profiles', 'profile')
       .leftJoinAndSelect('attendant.parking_locations', 'location')
+      .leftJoinAndSelect('location.contractors', 'contractor')
       .where('attendant.is_deleted = :isDeleted', { isDeleted: false });
 
     if (search) {
@@ -180,6 +181,7 @@ export class AttendantsService {
       .createQueryBuilder('attendant')
       .leftJoinAndSelect('attendant.profiles', 'profile')
       .leftJoinAndSelect('attendant.parking_locations', 'location')
+      .leftJoinAndSelect('location.contractors', 'contractor')
       .where(lwhereClause)
       .skip(skip)
       .take(perPage)
@@ -192,14 +194,14 @@ export class AttendantsService {
   async getAttendantByUserId(userId: string) {
     return this.attendantRepository.findOne({
       where: { user_id: userId, is_deleted: false },
-      relations: ['profiles', 'parking_locations'],
+      relations: ['profiles', 'parking_locations', 'parking_locations.contractors'],
     });
   }
 
   async getAttendantById(id: string) {
     const attendant = await this.attendantRepository.findOne({
       where: { id, is_deleted: false },
-      relations: ['profiles', 'parking_locations'],
+      relations: ['profiles', 'parking_locations', 'parking_locations.contractors'],
     });
 
     if (!attendant) {
@@ -266,6 +268,7 @@ export class AttendantsService {
       .createQueryBuilder('attendant')
       .leftJoinAndSelect('attendant.profiles', 'profile')
       .leftJoinAndSelect('attendant.parking_locations', 'location')
+      .leftJoinAndSelect('location.contractors', 'contractor')
       .where('attendant.is_deleted = :isDeleted', { isDeleted: false })
       .andWhere('attendant.location_id IN (:...locationIds)', { locationIds });
 

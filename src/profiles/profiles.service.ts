@@ -14,9 +14,22 @@ export class ProfilesService {
   ) {}
 
   async getProfile(userId: string) {
-    return this.profileRepository.findOne({
-      where: { id: userId, is_deleted: false },
-    });
+    try {
+      const profile = await this.profileRepository
+        .createQueryBuilder('profile')
+        .where('profile.id = :userId', { userId })
+        .andWhere('profile.is_deleted = :isDeleted', { isDeleted: false })
+        .getOne();
+
+      if (!profile) {
+        return null;
+      }
+
+      return profile;
+    } catch (error) {
+      console.error('Error in getProfile:', error);
+      throw error;
+    }
   }
 
   async createSuperAdmin(data: {
