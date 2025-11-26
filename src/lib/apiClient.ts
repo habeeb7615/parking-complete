@@ -26,7 +26,20 @@ class ApiClient {
   private baseURL: string;
 
   constructor(baseURL: string = API_BASE_URL) {
-    this.baseURL = baseURL;
+    // Normalize base URL - remove trailing slashes
+    const normalizedURL = baseURL.trim().replace(/\/+$/, '');
+    
+    // Only append /api for localhost (development)
+    // Production server (camsstaging.microlent.com/apitest) doesn't use /api prefix
+    // Local: http://localhost:3000/api → stays as is (already has /api)
+    // Live: https://camsstaging.microlent.com/apitest → stays as is (no /api needed)
+    if (normalizedURL.includes('localhost') || normalizedURL.includes('127.0.0.1')) {
+      // Local development: ensure /api is present
+      this.baseURL = normalizedURL.endsWith('/api') ? normalizedURL : `${normalizedURL}/api`;
+    } else {
+      // Production: use base URL as-is (no /api prefix)
+      this.baseURL = normalizedURL;
+    }
   }
 
   /**
