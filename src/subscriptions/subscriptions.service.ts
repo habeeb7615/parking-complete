@@ -4,18 +4,9 @@ import { Repository, MoreThan, LessThan } from 'typeorm';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 import { Profile } from '../entities/profile.entity';
 import { randomUUID } from 'crypto';
-
-export interface CreateSubscriptionPlanData {
-  name: string;
-  price: number;
-  days: number;
-}
-
-export interface AssignSubscriptionData {
-  contractorId: string;
-  planId: string;
-  durationDays?: number;
-}
+import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
+import { UpdateSubscriptionPlanDto } from './dto/update-subscription-plan.dto';
+import { AssignSubscriptionDto } from './dto/assign-subscription.dto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -45,7 +36,7 @@ export class SubscriptionsService {
     return plan;
   }
 
-  async createSubscriptionPlan(data: CreateSubscriptionPlanData) {
+  async createSubscriptionPlan(data: CreateSubscriptionPlanDto) {
     const planId = randomUUID();
     const plan = this.subscriptionPlanRepository.create({
       id: planId,
@@ -63,7 +54,7 @@ export class SubscriptionsService {
     return this.subscriptionPlanRepository.save(plan);
   }
 
-  async updateSubscriptionPlan(id: string, data: Partial<CreateSubscriptionPlanData>) {
+  async updateSubscriptionPlan(id: string, data: UpdateSubscriptionPlanDto) {
     const plan = await this.getSubscriptionPlanById(id);
 
     if (data.name !== undefined) plan.name = data.name;
@@ -112,7 +103,7 @@ export class SubscriptionsService {
     };
   }
 
-  async assignSubscription(data: AssignSubscriptionData) {
+  async assignSubscription(data: AssignSubscriptionDto) {
     const { contractorId, planId, durationDays = 30 } = data;
 
     // Verify plan exists

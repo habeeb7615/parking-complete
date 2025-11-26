@@ -1,11 +1,15 @@
 import { Controller, Get, Post, UseGuards, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { SubscriptionsService, CreateSubscriptionPlanData, AssignSubscriptionData } from './subscriptions.service';
+import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
+import { UpdateSubscriptionPlanDto } from './dto/update-subscription-plan.dto';
+import { AssignSubscriptionDto } from './dto/assign-subscription.dto';
+import { ExtendSubscriptionDto } from './dto/extend-subscription.dto';
 
 @ApiTags('subscriptions')
 @Controller('subscriptions')
@@ -40,22 +44,12 @@ export class SubscriptionsController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create subscription plan', description: 'Create a new subscription plan' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', example: 'Primimum' },
-        price: { type: 'number', example: 500 },
-        days: { type: 'number', example: 28 },
-      },
-      required: ['name', 'price', 'days'],
-    },
-  })
+  @ApiBody({ type: CreateSubscriptionPlanDto })
   @ApiStandardResponse({
     status: 201,
     description: 'Subscription plan created successfully',
   })
-  async createSubscriptionPlan(@Body() data: CreateSubscriptionPlanData) {
+  async createSubscriptionPlan(@Body() data: CreateSubscriptionPlanDto) {
     return this.subscriptionsService.createSubscriptionPlan(data);
   }
 
@@ -64,22 +58,13 @@ export class SubscriptionsController {
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update subscription plan', description: 'Update an existing subscription plan' })
   @ApiParam({ name: 'id', description: 'Plan ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', nullable: true },
-        price: { type: 'number', nullable: true },
-        days: { type: 'number', nullable: true },
-      },
-    },
-  })
+  @ApiBody({ type: UpdateSubscriptionPlanDto })
   @ApiStandardResponse({
     status: 200,
     description: 'Subscription plan updated successfully',
   })
   @ApiErrorResponse(404, 'Subscription plan not found')
-  async updateSubscriptionPlan(@Param('id') id: string, @Body() data: Partial<CreateSubscriptionPlanData>) {
+  async updateSubscriptionPlan(@Param('id') id: string, @Body() data: UpdateSubscriptionPlanDto) {
     return this.subscriptionsService.updateSubscriptionPlan(id, data);
   }
 
@@ -114,22 +99,12 @@ export class SubscriptionsController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Assign subscription', description: 'Assign or update subscription for a contractor' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        contractorId: { type: 'string' },
-        planId: { type: 'string' },
-        durationDays: { type: 'number', example: 30, nullable: true },
-      },
-      required: ['contractorId', 'planId'],
-    },
-  })
+  @ApiBody({ type: AssignSubscriptionDto })
   @ApiStandardResponse({
     status: 201,
     description: 'Subscription assigned successfully',
   })
-  async assignSubscription(@Body() data: AssignSubscriptionData) {
+  async assignSubscription(@Body() data: AssignSubscriptionDto) {
     return this.subscriptionsService.assignSubscription(data);
   }
 
@@ -138,20 +113,12 @@ export class SubscriptionsController {
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Extend subscription', description: 'Extend existing subscription for a contractor' })
   @ApiParam({ name: 'contractorId', description: 'Contractor ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        additionalDays: { type: 'number', example: 30 },
-      },
-      required: ['additionalDays'],
-    },
-  })
+  @ApiBody({ type: ExtendSubscriptionDto })
   @ApiStandardResponse({
     status: 200,
     description: 'Subscription extended successfully',
   })
-  async extendSubscription(@Param('contractorId') contractorId: string, @Body() data: { additionalDays: number }) {
+  async extendSubscription(@Param('contractorId') contractorId: string, @Body() data: ExtendSubscriptionDto) {
     return this.subscriptionsService.extendSubscription(contractorId, data.additionalDays);
   }
 

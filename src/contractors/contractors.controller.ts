@@ -1,6 +1,6 @@
 import { Controller, Get, Post, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { ContractorsService, PaginationParams, CreateContractorData } from './contractors.service';
+import { ContractorsService, PaginationParams } from './contractors.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -8,6 +8,8 @@ import { UserRole } from '../common/enums/user-role.enum';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 import { IPagination } from '../common/interfaces/pagination.interface';
 import { PaginationSchema } from '../common/schemas/pagination.schema';
+import { CreateContractorDto } from './dto/create-contractor.dto';
+import { UpdateContractorDto } from './dto/update-contractor.dto';
 
 @ApiTags('contractors')
 @Controller('contractors')
@@ -61,44 +63,10 @@ export class ContractorsController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create contractor', description: 'Create a new contractor with profile' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        user_name: { type: 'string', example: 'John Doe' },
-        email: { type: 'string', example: 'contractor@example.com' },
-        password: { type: 'string', example: 'Password123!' },
-        phone_number: { type: 'string', example: '+1234567890', nullable: true },
-        company_name: { type: 'string', example: 'ABC Parking Solutions' },
-        contact_number: { type: 'string', example: '+1234567890' },
-        allowed_locations: { type: 'number', example: 5 },
-        allowed_attendants_per_location: { type: 'number', example: 3 },
-        status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
-        rates_2wheeler: {
-          type: 'object',
-          properties: {
-            upTo2Hours: { type: 'number', example: 2 },
-            upTo6Hours: { type: 'number', example: 5 },
-            upTo12Hours: { type: 'number', example: 8 },
-            upTo24Hours: { type: 'number', example: 12 },
-          },
-        },
-        rates_4wheeler: {
-          type: 'object',
-          properties: {
-            upTo2Hours: { type: 'number', example: 5 },
-            upTo6Hours: { type: 'number', example: 10 },
-            upTo12Hours: { type: 'number', example: 18 },
-            upTo24Hours: { type: 'number', example: 30 },
-          },
-        },
-      },
-      required: ['user_name', 'email', 'password', 'company_name', 'contact_number', 'allowed_locations', 'allowed_attendants_per_location', 'rates_2wheeler', 'rates_4wheeler'],
-    },
-  })
+  @ApiBody({ type: CreateContractorDto })
   @ApiResponse({ status: 201, description: 'Contractor created successfully' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
-  async createContractor(@Body() data: CreateContractorData, @Request() req) {
+  async createContractor(@Body() data: CreateContractorDto, @Request() req) {
     return this.contractorsService.createContractor(data, req.user?.id);
   }
 
@@ -107,27 +75,10 @@ export class ContractorsController {
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update contractor', description: 'Update contractor information' })
   @ApiParam({ name: 'id', description: 'Contractor ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        user_name: { type: 'string', nullable: true },
-        email: { type: 'string', nullable: true },
-        password: { type: 'string', nullable: true },
-        phone_number: { type: 'string', nullable: true },
-        company_name: { type: 'string', nullable: true },
-        contact_number: { type: 'string', nullable: true },
-        allowed_locations: { type: 'number', nullable: true },
-        allowed_attendants_per_location: { type: 'number', nullable: true },
-        status: { type: 'string', enum: ['active', 'inactive'], nullable: true },
-        rates_2wheeler: { type: 'object', nullable: true },
-        rates_4wheeler: { type: 'object', nullable: true },
-      },
-    },
-  })
+  @ApiBody({ type: UpdateContractorDto })
   @ApiResponse({ status: 200, description: 'Contractor updated successfully' })
   @ApiResponse({ status: 404, description: 'Contractor not found' })
-  async updateContractor(@Param('id') id: string, @Body() data: Partial<CreateContractorData>, @Request() req) {
+  async updateContractor(@Param('id') id: string, @Body() data: UpdateContractorDto, @Request() req) {
     return this.contractorsService.updateContractor(id, data, req.user?.id);
   }
 

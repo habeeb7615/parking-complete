@@ -1,6 +1,6 @@
 import { Controller, Get, Post, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { LocationsService, CreateLocationData } from './locations.service';
+import { LocationsService } from './locations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -9,6 +9,9 @@ import { PaginationParams } from '../contractors/contractors.service';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 import { IPagination } from '../common/interfaces/pagination.interface';
 import { PaginationSchema } from '../common/schemas/pagination.schema';
+import { CreateLocationDto } from './dto/create-location.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
+import { AssignAttendantDto } from './dto/assign-attendant.dto';
 
 @ApiTags('locations')
 @Controller('locations')
@@ -61,26 +64,11 @@ export class LocationsController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Create location', description: 'Create a new parking location' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        locations_name: { type: 'string', example: 'Downtown Parking' },
-        address: { type: 'string', example: '123 Main St' },
-        city: { type: 'string', example: 'New York', nullable: true },
-        state: { type: 'string', example: 'NY', nullable: true },
-        pincode: { type: 'string', example: '10001', nullable: true },
-        total_slots: { type: 'number', example: 50 },
-        contractor_id: { type: 'string' },
-        status: { type: 'string', example: 'active', nullable: true },
-      },
-      required: ['locations_name', 'address', 'total_slots', 'contractor_id'],
-    },
-  })
+  @ApiBody({ type: CreateLocationDto })
   @ApiResponse({ status: 201, description: 'Location created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - Cannot create for other contractors' })
   @ApiResponse({ status: 400, description: 'Bad Request - Limit exceeded' })
-  async createLocation(@Body() data: CreateLocationData, @Request() req) {
+  async createLocation(@Body() data: CreateLocationDto, @Request() req) {
     return this.locationsService.createLocation(data, req.user?.id, req.user?.role);
   }
 
@@ -89,24 +77,10 @@ export class LocationsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Update location', description: 'Update parking location information' })
   @ApiParam({ name: 'id', description: 'Location ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        locations_name: { type: 'string', nullable: true },
-        address: { type: 'string', nullable: true },
-        city: { type: 'string', nullable: true },
-        state: { type: 'string', nullable: true },
-        pincode: { type: 'string', nullable: true },
-        total_slots: { type: 'number', nullable: true },
-        contractor_id: { type: 'string', nullable: true },
-        status: { type: 'string', nullable: true },
-      },
-    },
-  })
+  @ApiBody({ type: UpdateLocationDto })
   @ApiResponse({ status: 200, description: 'Location updated successfully' })
   @ApiResponse({ status: 404, description: 'Location not found' })
-  async updateLocation(@Param('id') id: string, @Body() data: Partial<CreateLocationData>, @Request() req) {
+  async updateLocation(@Param('id') id: string, @Body() data: UpdateLocationDto, @Request() req) {
     return this.locationsService.updateLocation(id, data, req.user?.id);
   }
 
@@ -141,20 +115,12 @@ export class LocationsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Assign attendant to location', description: 'Assign an attendant to a parking location' })
   @ApiParam({ name: 'id', description: 'Location ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        attendantId: { type: 'string' },
-      },
-      required: ['attendantId'],
-    },
-  })
+  @ApiBody({ type: AssignAttendantDto })
   @ApiStandardResponse({
     status: 200,
     description: 'Attendant assigned successfully',
   })
-  async assignLocationToAttendant(@Param('id') id: string, @Body() data: { attendantId: string }) {
+  async assignLocationToAttendant(@Param('id') id: string, @Body() data: AssignAttendantDto) {
     return this.locationsService.assignLocationToAttendant(data.attendantId, id);
   }
 

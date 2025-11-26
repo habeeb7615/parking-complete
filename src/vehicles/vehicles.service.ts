@@ -5,22 +5,9 @@ import { Vehicle } from '../entities/vehicle.entity';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
 import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 import { randomUUID } from 'crypto';
-
-export interface CreateVehicleData {
-  plate_number: string;
-  vehicle_type: string;
-  location_id: string;
-  contractor_id: string;
-  mobile_number?: string;
-  gate_in_id?: string;
-  session_id?: string;
-}
-
-export interface CheckoutVehicleData {
-  check_out_time: string;
-  payment_amount: number;
-  payment_method?: 'cash' | 'card' | 'digital' | 'free';
-}
+import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { CheckoutVehicleDto } from './dto/checkout-vehicle.dto';
 
 @Injectable()
 export class VehiclesService {
@@ -218,7 +205,7 @@ export class VehiclesService {
     }));
   }
 
-  async createVehicle(data: CreateVehicleData, createdBy?: string) {
+  async createVehicle(data: CreateVehicleDto, createdBy?: string) {
     // Check if vehicle is already checked in
     const existingVehicle = await this.vehicleRepository.findOne({
       where: {
@@ -254,7 +241,7 @@ export class VehiclesService {
     return this.getVehicleById(savedVehicle.id);
   }
 
-  async updateVehicle(id: string, data: Partial<CreateVehicleData>, updatedBy?: string) {
+  async updateVehicle(id: string, data: UpdateVehicleDto, updatedBy?: string) {
     const vehicle = await this.getVehicleById(id);
 
     if (data.plate_number !== undefined) vehicle.plate_number = data.plate_number;
@@ -269,7 +256,7 @@ export class VehiclesService {
     return this.getVehicleById(id);
   }
 
-  async checkoutVehicle(vehicleId: string, checkoutData: CheckoutVehicleData, updatedBy?: string) {
+  async checkoutVehicle(vehicleId: string, checkoutData: CheckoutVehicleDto, updatedBy?: string) {
     const vehicle = await this.getVehicleById(vehicleId);
 
     if (vehicle.check_out_time) {

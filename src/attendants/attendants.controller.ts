@@ -1,6 +1,6 @@
 import { Controller, Get, Post, UseGuards, Param, Body, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { AttendantsService, CreateAttendantData } from './attendants.service';
+import { AttendantsService } from './attendants.service';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -9,6 +9,8 @@ import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams } from '../contractors/contractors.service';
 import { IPagination } from '../common/interfaces/pagination.interface';
 import { PaginationSchema } from '../common/schemas/pagination.schema';
+import { CreateAttendantDto } from './dto/create-attendant.dto';
+import { UpdateAttendantDto } from './dto/update-attendant.dto';
 
 @ApiTags('attendants')
 @Controller('attendants')
@@ -75,26 +77,12 @@ export class AttendantsController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Create attendant', description: 'Create a new attendant with profile' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        user_name: { type: 'string', example: 'John Doe' },
-        email: { type: 'string', example: 'attendant@example.com' },
-        password: { type: 'string', example: 'Password123!' },
-        phone_number: { type: 'string', example: '+1234567890', nullable: true },
-        location_id: { type: 'string', nullable: true },
-        contractor_id: { type: 'string', nullable: true },
-        status: { type: 'string', enum: ['active', 'inactive'], example: 'active' },
-      },
-      required: ['user_name', 'email', 'password'],
-    },
-  })
+  @ApiBody({ type: CreateAttendantDto })
   @ApiResponse({ status: 201, description: 'Attendant created successfully' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiResponse({ status: 403, description: 'Forbidden - Cannot create for other contractors' })
   @ApiResponse({ status: 400, description: 'Bad Request - Limit exceeded' })
-  async createAttendant(@Body() data: CreateAttendantData, @Request() req) {
+  async createAttendant(@Body() data: CreateAttendantDto, @Request() req) {
     return this.attendantsService.createAttendant(data, req.user?.id, req.user?.role);
   }
 
@@ -103,22 +91,10 @@ export class AttendantsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR)
   @ApiOperation({ summary: 'Update attendant', description: 'Update attendant information' })
   @ApiParam({ name: 'id', description: 'Attendant ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        user_name: { type: 'string', nullable: true },
-        email: { type: 'string', nullable: true },
-        password: { type: 'string', nullable: true },
-        phone_number: { type: 'string', nullable: true },
-        location_id: { type: 'string', nullable: true },
-        status: { type: 'string', enum: ['active', 'inactive'], nullable: true },
-      },
-    },
-  })
+  @ApiBody({ type: UpdateAttendantDto })
   @ApiResponse({ status: 200, description: 'Attendant updated successfully' })
   @ApiResponse({ status: 404, description: 'Attendant not found' })
-  async updateAttendant(@Param('id') id: string, @Body() data: Partial<CreateAttendantData>, @Request() req) {
+  async updateAttendant(@Param('id') id: string, @Body() data: UpdateAttendantDto, @Request() req) {
     return this.attendantsService.updateAttendant(id, data, req.user?.id);
   }
 

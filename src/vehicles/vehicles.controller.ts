@@ -9,7 +9,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { VehiclesService, CreateVehicleData, CheckoutVehicleData } from './vehicles.service';
+import { VehiclesService } from './vehicles.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -18,6 +18,9 @@ import { PaginationParams } from '../contractors/contractors.service';
 import { IPagination } from '../common/interfaces/pagination.interface';
 import { PaginationSchema } from '../common/schemas/pagination.schema';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { CheckoutVehicleDto } from './dto/checkout-vehicle.dto';
 
 @ApiTags('vehicles')
 @Controller('vehicles')
@@ -78,23 +81,9 @@ export class VehiclesController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Create vehicle (Check-in)', description: 'Create a new vehicle check-in record' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        plate_number: { type: 'string', example: 'KA01AB1234' },
-        vehicle_type: { type: 'string', example: '2-wheeler' },
-        location_id: { type: 'string' },
-        contractor_id: { type: 'string' },
-        mobile_number: { type: 'string', nullable: true },
-        gate_in_id: { type: 'string', nullable: true },
-        session_id: { type: 'string', nullable: true },
-      },
-      required: ['plate_number', 'vehicle_type', 'location_id', 'contractor_id'],
-    },
-  })
+  @ApiBody({ type: CreateVehicleDto })
   @ApiResponse({ status: 201, description: 'Vehicle checked in successfully' })
-  async createVehicle(@Body() data: CreateVehicleData, @Request() req) {
+  async createVehicle(@Body() data: CreateVehicleDto, @Request() req) {
     return this.vehiclesService.createVehicle(data, req.user?.id);
   }
 
@@ -103,21 +92,10 @@ export class VehiclesController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Update vehicle', description: 'Update vehicle information' })
   @ApiParam({ name: 'id', description: 'Vehicle ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        plate_number: { type: 'string', nullable: true },
-        vehicle_type: { type: 'string', nullable: true },
-        location_id: { type: 'string', nullable: true },
-        contractor_id: { type: 'string', nullable: true },
-        mobile_number: { type: 'string', nullable: true },
-      },
-    },
-  })
+  @ApiBody({ type: UpdateVehicleDto })
   @ApiResponse({ status: 200, description: 'Vehicle updated successfully' })
   @ApiResponse({ status: 404, description: 'Vehicle not found' })
-  async updateVehicle(@Param('id') id: string, @Body() data: Partial<CreateVehicleData>, @Request() req) {
+  async updateVehicle(@Param('id') id: string, @Body() data: UpdateVehicleDto, @Request() req) {
     return this.vehiclesService.updateVehicle(id, data, req.user?.id);
   }
 
@@ -126,22 +104,12 @@ export class VehiclesController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
   @ApiOperation({ summary: 'Checkout vehicle', description: 'Checkout a vehicle and process payment' })
   @ApiParam({ name: 'id', description: 'Vehicle ID', type: 'string' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        check_out_time: { type: 'string', format: 'date-time' },
-        payment_amount: { type: 'number', example: 25.00 },
-        payment_method: { type: 'string', enum: ['cash', 'card', 'digital', 'free'], example: 'cash' },
-      },
-      required: ['check_out_time', 'payment_amount'],
-    },
-  })
+  @ApiBody({ type: CheckoutVehicleDto })
   @ApiResponse({ status: 200, description: 'Vehicle checked out successfully' })
   @ApiResponse({ status: 404, description: 'Vehicle not found' })
   async checkoutVehicle(
     @Param('id') id: string,
-    @Body() checkoutData: CheckoutVehicleData,
+    @Body() checkoutData: CheckoutVehicleDto,
     @Request() req,
   ) {
     return this.vehiclesService.checkoutVehicle(id, checkoutData, req.user?.id);

@@ -10,16 +10,8 @@ import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
 import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
-
-export interface CreateAttendantData {
-  user_name: string;
-  email: string;
-  password: string;
-  phone_number?: string;
-  location_id?: string;
-  contractor_id?: string;
-  status?: 'active' | 'inactive';
-}
+import { CreateAttendantDto } from './dto/create-attendant.dto';
+import { UpdateAttendantDto } from './dto/update-attendant.dto';
 
 @Injectable()
 export class AttendantsService {
@@ -302,7 +294,7 @@ export class AttendantsService {
     };
   }
 
-  async createAttendant(data: CreateAttendantData, createdBy?: string, userRole?: UserRole): Promise<Attendant> {
+  async createAttendant(data: CreateAttendantDto, createdBy?: string, userRole?: UserRole): Promise<Attendant> {
     // Check if email already exists
     const existingProfile = await this.profileRepository.findOne({
       where: { email: data.email, is_deleted: false },
@@ -416,7 +408,7 @@ export class AttendantsService {
     return this.getAttendantById(savedAttendant.id);
   }
 
-  async updateAttendant(id: string, data: Partial<CreateAttendantData>, updatedBy?: string): Promise<Attendant> {
+  async updateAttendant(id: string, data: UpdateAttendantDto, updatedBy?: string): Promise<Attendant> {
     const attendant = await this.getAttendantById(id);
 
     // Update attendant fields

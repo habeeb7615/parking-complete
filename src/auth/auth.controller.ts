@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nes
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { LoginDto } from './dto/login.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -11,15 +12,7 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'User login', description: 'Authenticate user and get JWT token' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', example: 'user@example.com' },
-        password: { type: 'string', example: 'password123' },
-      },
-    },
-  })
+  @ApiBody({ type: LoginDto })
   @ApiStandardResponse({
     status: 200,
     description: 'Login successful',
@@ -34,7 +27,7 @@ export class AuthController {
     },
   })
   @ApiErrorResponse(401, 'Invalid credentials')
-  async login(@Body() loginDto: { email: string; password: string }) {
+  async login(@Body() loginDto: LoginDto) {
     try {
       const user = await this.authService.validateUser(
         loginDto.email,

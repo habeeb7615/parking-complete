@@ -7,6 +7,8 @@ import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
+import { CreateContractorDto } from './dto/create-contractor.dto';
+import { UpdateContractorDto } from './dto/update-contractor.dto';
 
 export interface PaginationParams {
   page?: number;
@@ -22,30 +24,6 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
   totalPages: number;
-}
-
-export interface CreateContractorData {
-  user_name: string;
-  email: string;
-  password: string;
-  phone_number?: string;
-  company_name: string;
-  contact_number: string;
-  allowed_locations: number;
-  allowed_attendants_per_location: number;
-  status?: 'active' | 'inactive';
-  rates_2wheeler: {
-    upTo2Hours: number;
-    upTo6Hours: number;
-    upTo12Hours: number;
-    upTo24Hours: number;
-  };
-  rates_4wheeler: {
-    upTo2Hours: number;
-    upTo6Hours: number;
-    upTo12Hours: number;
-    upTo24Hours: number;
-  };
 }
 
 @Injectable()
@@ -243,7 +221,7 @@ export class ContractorsService {
     return contractor;
   }
 
-  async createContractor(data: CreateContractorData, createdBy?: string): Promise<Contractor> {
+  async createContractor(data: CreateContractorDto, createdBy?: string): Promise<Contractor> {
     // Check if email already exists
     const existingProfile = await this.profileRepository.findOne({
       where: { email: data.email, is_deleted: false },
@@ -297,7 +275,7 @@ export class ContractorsService {
     return this.getContractorById(savedContractor.id);
   }
 
-  async updateContractor(id: string, data: Partial<CreateContractorData>, updatedBy?: string): Promise<Contractor> {
+  async updateContractor(id: string, data: UpdateContractorDto, updatedBy?: string): Promise<Contractor> {
     const contractor = await this.getContractorById(id);
 
     // Update contractor fields

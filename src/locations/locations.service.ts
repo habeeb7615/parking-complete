@@ -9,17 +9,8 @@ import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
 import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 import { randomUUID } from 'crypto';
-
-export interface CreateLocationData {
-  locations_name: string;
-  address: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-  total_slots: number;
-  contractor_id: string;
-  status?: string;
-}
+import { CreateLocationDto } from './dto/create-location.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Injectable()
 export class LocationsService {
@@ -353,7 +344,7 @@ export class LocationsService {
     }
   }
 
-  async createLocation(data: CreateLocationData, createdBy?: string, userRole?: UserRole): Promise<Location> {
+  async createLocation(data: CreateLocationDto, createdBy?: string, userRole?: UserRole): Promise<Location> {
     // If contractor is creating, validate limits and ensure they're creating for themselves
     if (userRole === UserRole.CONTRACTOR && createdBy) {
       // Get contractor by user_id
@@ -408,7 +399,7 @@ export class LocationsService {
     return this.getLocationById(savedLocation.id);
   }
 
-  async updateLocation(id: string, data: Partial<CreateLocationData>, updatedBy?: string): Promise<Location> {
+  async updateLocation(id: string, data: UpdateLocationDto, updatedBy?: string): Promise<Location> {
     const location = await this.getLocationById(id);
 
     if (data.locations_name !== undefined) location.locations_name = data.locations_name;
