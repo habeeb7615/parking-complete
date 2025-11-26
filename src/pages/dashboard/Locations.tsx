@@ -23,6 +23,7 @@ export default function Locations() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [allLocations, setAllLocations] = useState<Location[]>([]); // contractor local cache
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Location | null>(null);
   const [contractors, setContractors] = useState<any[]>([]);
@@ -315,11 +316,14 @@ export default function Locations() {
 
   const remove = async (id: string) => {
     try {
+      setDeletingId(id);
       await LocationAPI.deleteLocation(id);
       toast({ title: "Deleted", description: "Location deleted" });
       fetchData();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e?.message || "Failed to delete" });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -506,11 +510,20 @@ export default function Locations() {
                         {(isSuperAdmin || isContractor) && (
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => openEdit(loc)}>
+                              <Button variant="ghost" size="sm" onClick={() => openEdit(loc)} disabled={deletingId !== null}>
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => remove(loc.id)}>
-                                <Trash2 className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => remove(loc.id)}
+                                disabled={deletingId !== null}
+                              >
+                                {deletingId === loc.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </TableCell>
@@ -540,11 +553,20 @@ export default function Locations() {
                           </Badge>
                           {(isSuperAdmin || isContractor) && (
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => openEdit(loc)}>
+                              <Button variant="ghost" size="sm" onClick={() => openEdit(loc)} disabled={deletingId !== null}>
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => remove(loc.id)}>
-                                <Trash2 className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => remove(loc.id)}
+                                disabled={deletingId !== null}
+                              >
+                                {deletingId === loc.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           )}

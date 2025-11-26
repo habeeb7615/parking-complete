@@ -24,6 +24,7 @@ const Attendants = memo(function Attendants() {
   const isAttendant = profile?.role === "attendant";
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Attendant | null>(null);
   const [contractors, setContractors] = useState<any[]>([]);
@@ -352,11 +353,14 @@ const Attendants = memo(function Attendants() {
 
   const remove = async (id: string) => {
     try {
+      setDeletingId(id);
       await SuperAdminAPI.deleteAttendant(id);
       toast({ title: "Deleted", description: "Attendant deleted" });
       fetchData();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Error", description: e?.message || "Failed to delete" });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -581,11 +585,20 @@ const Attendants = memo(function Attendants() {
                       {(isSuperAdmin || isContractor || isAttendant) && (
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(attendant)}>
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(attendant)} disabled={deletingId !== null}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => remove(attendant.id)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => remove(attendant.id)}
+                              disabled={deletingId !== null}
+                            >
+                              {deletingId === attendant.id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </TableCell>
