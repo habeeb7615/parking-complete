@@ -304,10 +304,12 @@ export class AttendantsService {
       throw new ConflictException('Email already exists');
     }
 
+    let contractor: Contractor | null = null;
+
     // If contractor is creating, validate limits and ensure they're creating for themselves
     if (userRole === UserRole.CONTRACTOR && createdBy) {
       // Get contractor by user_id
-      const contractor = await this.contractorRepository.findOne({
+      contractor = await this.contractorRepository.findOne({
         where: { user_id: createdBy, is_deleted: false },
       });
 
@@ -322,15 +324,27 @@ export class AttendantsService {
 
       // Set contractor_id to the logged-in contractor's ID
       data.contractor_id = contractor.id;
+    } else if (userRole === UserRole.SUPER_ADMIN && data.contractor_id) {
+      // For SUPER_ADMIN, get contractor by contractor_id
+      contractor = await this.contractorRepository.findOne({
+        where: { id: data.contractor_id, is_deleted: false },
+      });
 
-      // If location_id is provided, verify it belongs to this contractor
+      if (!contractor) {
+        throw new NotFoundException('Contractor not found');
+      }
+    }
+
+    // Validate attendant limits for ALL users (including SUPER_ADMIN) if contractor is known
+    if (contractor) {
+      // If location_id is provided, verify it belongs to this contractor and check limit
       if (data.location_id) {
         const location = await this.locationRepository.findOne({
           where: { id: data.location_id, contractor_id: contractor.id, is_deleted: false },
         });
 
         if (!location) {
-          throw new BadRequestException('Location does not belong to your contractor account');
+          throw new BadRequestException('Location does not belong to this contractor account');
         }
 
         // Check attendants per location limit
@@ -341,7 +355,7 @@ export class AttendantsService {
         const allowedPerLocation = contractor.allowed_attendants_per_location || 0;
         if (attendantsAtLocation >= allowedPerLocation) {
           throw new BadRequestException(
-            `You have reached the maximum limit of ${allowedPerLocation} attendants for this location. Please contact admin to increase your limit.`
+            `This location has reached the maximum limit of ${allowedPerLocation} attendants. Current attendants: ${attendantsAtLocation}. Please update the contractor's allowed_attendants_per_location limit to create more attendants.`
           );
         }
       } else {
@@ -362,7 +376,7 @@ export class AttendantsService {
           const maxAllowed = contractorLocations.length * (contractor.allowed_attendants_per_location || 0);
           if (totalAttendants >= maxAllowed) {
             throw new BadRequestException(
-              `You have reached the maximum limit of attendants. Please contact admin to increase your limit.`
+              `This contractor has reached the maximum limit of attendants. Current attendants: ${totalAttendants}, Max allowed: ${maxAllowed} (${contractorLocations.length} locations × ${contractor.allowed_attendants_per_location} per location). Please update the contractor's allowed_attendants_per_location limit to create more attendants.`
             );
           }
         }
