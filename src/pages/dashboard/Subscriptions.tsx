@@ -205,14 +205,22 @@ export default function Subscriptions() {
             </div>
             <div>
               <Label htmlFor="plan">Subscription Plan</Label>
-              <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+              <Select value={selectedPlan} onValueChange={(planId) => {
+                setSelectedPlan(planId);
+                // Automatically set duration days from selected plan
+                const selectedPlanData = plans.find(p => p.id === planId);
+                if (selectedPlanData) {
+                  const planDays = selectedPlanData.days || selectedPlanData.duration_days || 30;
+                  setDurationDays(planDays);
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a plan" />
                 </SelectTrigger>
                 <SelectContent>
                   {plans.map((plan) => (
                     <SelectItem key={plan.id} value={plan.id}>
-                      {plan.name} - ${plan.price}/month
+                      {plan.name} - ₹{plan.price} ({plan.days || plan.duration_days || 30} days)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -227,6 +235,9 @@ export default function Subscriptions() {
                 onChange={(e) => setDurationDays(Number(e.target.value))}
                 min="1"
               />
+              <div className="text-xs text-muted-foreground mt-1">
+                Duration will be automatically set from the selected plan. You can modify it if needed.
+              </div>
             </div>
             <Button onClick={handleAssignSubscription} className="w-full">
               Assign Subscription

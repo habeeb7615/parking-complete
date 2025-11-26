@@ -4,8 +4,10 @@ export interface SubscriptionPlan {
   id: string;
   name: string;
   price: number;
-  max_locations: number;
-  max_attendants: number;
+  max_locations?: number;
+  max_attendants?: number;
+  days?: number;
+  duration_days?: number;
   features: any;
   created_on: string;
   updated_on: string;
@@ -116,7 +118,7 @@ export class SubscriptionAPI {
   // Update subscription plan
   static async updateSubscriptionPlan(
     planId: string, 
-    updates: Partial<Pick<SubscriptionPlan, 'name' | 'price' | 'max_locations' | 'max_attendants' | 'features'>>
+    updates: Partial<Pick<SubscriptionPlan, 'name' | 'price' | 'days' | 'duration_days' | 'max_locations' | 'max_attendants' | 'features'>>
   ): Promise<SubscriptionPlan> {
     const response = await apiClient.post<SubscriptionPlan>(`/subscriptions/plans/update/${planId}`, updates);
     return response.data;
@@ -124,7 +126,7 @@ export class SubscriptionAPI {
 
   // Create new subscription plan
   static async createSubscriptionPlan(
-    planData: Pick<SubscriptionPlan, 'name' | 'price' | 'max_locations' | 'max_attendants' | 'features'>
+    planData: Pick<SubscriptionPlan, 'name' | 'price' | 'days' | 'duration_days' | 'max_locations' | 'max_attendants' | 'features'>
   ): Promise<SubscriptionPlan> {
     const response = await apiClient.post<SubscriptionPlan>('/subscriptions/plans', planData);
     return response.data;

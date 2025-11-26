@@ -46,6 +46,12 @@ const navigation: NavItem[] = [
     roles: ["super_admin"],
   },
   {
+    title: "Subscriptions",
+    href: "/dashboard/subscriptions",
+    icon: CreditCard,
+    roles: ["super_admin"],
+  },
+  {
     title: "Locations",
     href: "/dashboard/locations",
     icon: MapPin,
@@ -76,10 +82,10 @@ const navigation: NavItem[] = [
     roles: ["attendant"],
   },
   {
-    title: "Reports",
-    href: "/dashboard/reports",
-    icon: FileText,
-    roles: ["super_admin", "contractor"],
+    title: "Logs",
+    href: "/dashboard/logs",
+    icon: Activity,
+    roles: ["super_admin", "contractor", "attendant"],
   },
   {
     title: "Income",
@@ -88,16 +94,10 @@ const navigation: NavItem[] = [
     roles: ["super_admin", "contractor"],
   },
   {
-    title: "Logs",
-    href: "/dashboard/logs",
-    icon: Activity,
-    roles: ["super_admin", "contractor", "attendant"],
-  },
-  {
-    title: "Subscriptions",
-    href: "/dashboard/subscriptions",
-    icon: CreditCard,
-    roles: ["super_admin"],
+    title: "Reports",
+    href: "/dashboard/reports",
+    icon: FileText,
+    roles: ["super_admin", "contractor"],
   },
   {
     title: "Settings",

@@ -55,8 +55,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
   const [planForm, setPlanForm] = useState({
     name: '',
     price: 0,
-    max_locations: 0,
-    max_attendants: 0
+    days: 0
   });
   
   // Extend subscription states
@@ -255,8 +254,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
     setPlanForm({
       name: plan.name,
       price: plan.price,
-      max_locations: plan.max_locations,
-      max_attendants: plan.max_attendants
+      days: plan.days || plan.duration_days || 30
     });
     setShowEditDialog(true);
   };
@@ -266,8 +264,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
     setPlanForm({
       name: '',
       price: 0,
-      max_locations: 0,
-      max_attendants: 0
+      days: 30
     });
     setShowCreateDialog(true);
   };
@@ -758,12 +755,8 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      {plan.max_locations} locations
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      {plan.max_attendants} attendants
+                      <Calendar className="h-4 w-4" />
+                      {plan.days || plan.duration_days || 30} days
                     </div>
                   </div>
                 </Card>
@@ -995,24 +988,18 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="plan-locations">Max Locations</Label>
+              <Label htmlFor="plan-days">Days</Label>
               <Input
-                id="plan-locations"
+                id="plan-days"
                 type="number"
-                value={planForm.max_locations}
-                onChange={(e) => setPlanForm(prev => ({ ...prev, max_locations: Number(e.target.value) }))}
-                placeholder="Enter max locations"
+                value={planForm.days}
+                onChange={(e) => setPlanForm(prev => ({ ...prev, days: Number(e.target.value) }))}
+                placeholder="Enter number of days"
+                min="1"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="plan-attendants">Max Attendants</Label>
-              <Input
-                id="plan-attendants"
-                type="number"
-                value={planForm.max_attendants}
-                onChange={(e) => setPlanForm(prev => ({ ...prev, max_attendants: Number(e.target.value) }))}
-                placeholder="Enter max attendants"
-              />
+              <div className="text-xs text-muted-foreground">
+                Number of days the subscription plan will be valid for when assigned
+              </div>
             </div>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowEditDialog(false)}>
@@ -1057,24 +1044,18 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-plan-locations">Max Locations</Label>
+              <Label htmlFor="new-plan-days">Days</Label>
               <Input
-                id="new-plan-locations"
+                id="new-plan-days"
                 type="number"
-                value={planForm.max_locations}
-                onChange={(e) => setPlanForm(prev => ({ ...prev, max_locations: Number(e.target.value) }))}
-                placeholder="Enter max locations"
+                value={planForm.days}
+                onChange={(e) => setPlanForm(prev => ({ ...prev, days: Number(e.target.value) }))}
+                placeholder="Enter number of days"
+                min="1"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-plan-attendants">Max Attendants</Label>
-              <Input
-                id="new-plan-attendants"
-                type="number"
-                value={planForm.max_attendants}
-                onChange={(e) => setPlanForm(prev => ({ ...prev, max_attendants: Number(e.target.value) }))}
-                placeholder="Enter max attendants"
-              />
+              <div className="text-xs text-muted-foreground">
+                Number of days the subscription plan will be valid for when assigned
+              </div>
             </div>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -1201,20 +1182,28 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
             {extendMode === 'change' && (
               <div className="space-y-2">
                 <Label htmlFor="plan-select">Select New Plan</Label>
-                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <Select value={selectedPlanId} onValueChange={(planId) => {
+                  setSelectedPlanId(planId);
+                  // Automatically set extension days from selected plan
+                  const selectedPlanData = plans.find(p => p.id === planId);
+                  if (selectedPlanData) {
+                    const planDays = selectedPlanData.days || selectedPlanData.duration_days || 30;
+                    setExtendDays(planDays);
+                  }
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a subscription plan" />
                   </SelectTrigger>
                   <SelectContent>
                     {plans.map((plan) => (
                       <SelectItem key={plan.id} value={plan.id}>
-                        {plan.name} - ₹{plan.price}/month
+                        {plan.name} - ₹{plan.price} ({plan.days || plan.duration_days || 30} days)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <div className="text-xs text-muted-foreground">
-                  Select the new plan to assign to this contractor
+                  Select the new plan to assign to this contractor. Duration will be automatically set from the plan.
                 </div>
               </div>
             )}
