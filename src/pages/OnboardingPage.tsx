@@ -77,7 +77,7 @@ export default function OnboardingPage() {
       // Refresh profile to get updated is_first_login value
       // The backend has already set is_first_login to false, so we need to refresh the profile state
       try {
-        const updatedProfile = await AuthAPI.getProfile();
+        const updatedProfile = await AuthAPI.fetchProfile();
         if (updatedProfile) {
           // Update profile state - updateProfile will make a PUT request but that's okay
           // The backend will return the updated profile with is_first_login: false

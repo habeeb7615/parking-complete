@@ -173,9 +173,9 @@ export class AuthAPI {
   }
 
   /**
-   * Get current user profile
+   * Fetch current user profile from API
    */
-  static async getProfile(): Promise<Profile> {
+  static async fetchProfile(): Promise<Profile> {
     const response = await apiClient.get<Profile>('/auth/profile');
     return response.data;
   }
