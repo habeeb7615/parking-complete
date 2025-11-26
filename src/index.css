@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --primary: 210 65% 45%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 30% 92%;
+    --secondary-foreground: 215 25% 15%;
+
+    --muted: 210 30% 94%;
+    --muted-foreground: 215 15% 45%;
+
+    --accent: 195 100% 50%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 45 93% 47%;
+    --warning-foreground: 210 40% 98%;
+
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 210 65% 45%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 215 25% 15%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 210 65% 45%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 215 20% 20%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 215 15% 25%;
+    --sidebar-ring: 210 65% 45%;
+
+    /* ParkFlow specific colors */
+    --parkflow-blue: 210 65% 45%;
+    --parkflow-blue-light: 210 65% 55%;
+    --parkflow-blue-dark: 210 65% 35%;
+    --parkflow-green: 142 76% 36%;
+    --parkflow-orange: 25 95% 53%;
+    --parkflow-red: 0 84% 60%;
+    --parkflow-gray: 215 15% 45%;
+    
+    /* Status colors */
+    --status-available: 142 76% 36%;
+    --status-occupied: 0 84% 60%;
+    --status-reserved: 45 93% 47%;
+    --status-maintenance: 215 15% 45%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 65% 45%) 0%, hsl(195 100% 50%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 76% 46%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(210 30% 98%) 100%);
+  }
+
+  .dark {
+    --background: 215 25% 8%;
+    --foreground: 210 20% 90%;
+
+    --card: 215 25% 10%;
+    --card-foreground: 210 20% 90%;
+
+    --popover: 215 25% 10%;
+    --popover-foreground: 210 20% 90%;
+
+    --primary: 210 65% 55%;
+    --primary-foreground: 215 25% 10%;
+
+    --secondary: 215 20% 15%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 215 20% 12%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 195 100% 60%;
+    --accent-foreground: 215 25% 10%;
+
+    --destructive: 0 84% 70%;
+    --destructive-foreground: 215 25% 10%;
+
+    --success: 142 76% 46%;
+    --success-foreground: 215 25% 10%;
+
+    --warning: 45 93% 57%;
+    --warning-foreground: 215 25% 10%;
+
+    --border: 215 15% 20%;
+    --input: 215 15% 20%;
+    --ring: 210 65% 55%;
+
+    --sidebar-background: 215 25% 6%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 210 65% 55%;
+    --sidebar-primary-foreground: 215 25% 10%;
+    --sidebar-accent: 215 20% 12%;
+    --sidebar-accent-foreground: 210 20% 85%;
+    --sidebar-border: 215 15% 15%;
+    --sidebar-ring: 210 65% 55%;
+
+    /* ParkFlow dark mode colors */
+    --parkflow-blue: 210 65% 55%;
+    --parkflow-blue-light: 210 65% 65%;
+    --parkflow-blue-dark: 210 65% 45%;
+    --parkflow-green: 142 76% 46%;
+    --parkflow-orange: 25 95% 63%;
+    --parkflow-red: 0 84% 70%;
+    --parkflow-gray: 215 15% 55%;
+    
+    /* Status colors dark mode */
+    --status-available: 142 76% 46%;
+    --status-occupied: 0 84% 70%;
+    --status-reserved: 45 93% 57%;
+    --status-maintenance: 215 15% 55%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(215 25% 10%) 0%, hsl(215 20% 15%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 46%) 0%, hsl(142 76% 56%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(215 25% 10%) 0%, hsl(215 20% 12%) 100%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Hide number input spinners */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+}
