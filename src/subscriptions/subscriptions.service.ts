@@ -8,9 +8,7 @@ import { randomUUID } from 'crypto';
 export interface CreateSubscriptionPlanData {
   name: string;
   price: number;
-  max_locations: number;
-  max_attendants: number;
-  features?: any;
+  days: number;
 }
 
 export interface AssignSubscriptionData {
@@ -53,9 +51,10 @@ export class SubscriptionsService {
       id: planId,
       name: data.name,
       price: data.price,
-      max_locations: data.max_locations,
-      max_attendants: data.max_attendants,
-      features: data.features || {},
+      days: data.days,
+      max_locations: 0,
+      max_attendants: 0,
+      features: {},
       is_deleted: false,
       created_on: new Date(),
       updated_on: new Date(),
@@ -69,9 +68,7 @@ export class SubscriptionsService {
 
     if (data.name !== undefined) plan.name = data.name;
     if (data.price !== undefined) plan.price = data.price;
-    if (data.max_locations !== undefined) plan.max_locations = data.max_locations;
-    if (data.max_attendants !== undefined) plan.max_attendants = data.max_attendants;
-    if (data.features !== undefined) plan.features = data.features;
+    if (data.days !== undefined) plan.days = data.days;
     plan.updated_on = new Date();
 
     return this.subscriptionPlanRepository.save(plan);

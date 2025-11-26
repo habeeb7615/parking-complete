@@ -23,6 +23,9 @@ export class SubscriptionPlan {
   @Column('int')
   max_attendants: number;
 
+  @Column('int', { nullable: true })
+  days: number;
+
   @Column('json', { nullable: true })
   features: any;
 

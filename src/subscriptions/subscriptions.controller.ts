@@ -44,13 +44,11 @@ export class SubscriptionsController {
     schema: {
       type: 'object',
       properties: {
-        name: { type: 'string', example: 'Premium Plan' },
-        price: { type: 'number', example: 999.99 },
-        max_locations: { type: 'number', example: 10 },
-        max_attendants: { type: 'number', example: 50 },
-        features: { type: 'object', nullable: true },
+        name: { type: 'string', example: 'Primimum' },
+        price: { type: 'number', example: 500 },
+        days: { type: 'number', example: 28 },
       },
-      required: ['name', 'price', 'max_locations', 'max_attendants'],
+      required: ['name', 'price', 'days'],
     },
   })
   @ApiStandardResponse({
@@ -72,9 +70,7 @@ export class SubscriptionsController {
       properties: {
         name: { type: 'string', nullable: true },
         price: { type: 'number', nullable: true },
-        max_locations: { type: 'number', nullable: true },
-        max_attendants: { type: 'number', nullable: true },
-        features: { type: 'object', nullable: true },
+        days: { type: 'number', nullable: true },
       },
     },
   })
