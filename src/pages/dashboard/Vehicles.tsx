@@ -284,7 +284,7 @@ export default function Vehicles() {
                   
                   {!isAttendant && (
                     <div className="text-gray-600 truncate">
-                      {vehicle.parking_locations?.contractors?.company_name || 'Unknown Contractor'}
+                      {vehicle.contractors?.company_name || vehicle.parking_locations?.contractors?.company_name || 'Unknown Contractor'}
                     </div>
                   )}
                   
@@ -378,7 +378,7 @@ export default function Vehicles() {
                   {!isAttendant && (
                     <div className="flex items-center space-x-1">
                       <span className="text-muted-foreground">Contractor:</span>
-                      <span className="truncate">{vehicle.parking_locations?.contractors?.company_name || 'Unknown'}</span>
+                      <span className="truncate">{vehicle.contractors?.company_name || vehicle.parking_locations?.contractors?.company_name || 'Unknown'}</span>
                     </div>
                   )}
                   {!isAttendant && (

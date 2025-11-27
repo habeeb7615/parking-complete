@@ -36,6 +36,13 @@ export interface Vehicle {
       company_name: string;
     };
   };
+  contractors?: {
+    id: string;
+    user_id: string;
+    company_name: string;
+    contact_number: string;
+    status: string;
+  };
 }
 
 export interface CreateVehicleData {
