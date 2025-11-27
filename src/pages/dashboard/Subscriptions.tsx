@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
-import { AlertTriangle, Calendar, RefreshCw, Users, MapPin } from "lucide-react";
+import { AlertTriangle, Calendar, RefreshCw, Users, MapPin, Loader2 } from "lucide-react";
 import { SubscriptionAPI, type SubscriptionPlan } from "@/services/subscriptionApi";
 import { ContractorAPI } from "@/services/contractorApi";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ export default function Subscriptions() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showExtendDialog, setShowExtendDialog] = useState(false);
   const [extendDays, setExtendDays] = useState<number>(30);
+  const [assigning, setAssigning] = useState(false);
   const { toast } = useToast();
 
   // Convert contractors to ComboboxOption format
@@ -117,14 +118,10 @@ export default function Subscriptions() {
       return;
     }
 
-    console.log('🔍 UI Assignment starting...');
-    console.log('  selectedContractor:', selectedContractor);
-    console.log('  selectedPlan:', selectedPlan);
-    console.log('  durationDays:', durationDays);
+    setAssigning(true);
 
     try {
       await SubscriptionAPI.assignSubscription(selectedContractor, selectedPlan, durationDays);
-      console.log('✅ UI Assignment successful');
       toast({
         title: "Success",
         description: "Subscription assigned successfully",
@@ -132,12 +129,21 @@ export default function Subscriptions() {
       setShowAssignDialog(false);
       fetchData();
     } catch (error: any) {
-      console.error('❌ UI Assignment failed:', error);
+      // Extract error message properly - handle both ApiError format and generic errors
+      let errorMessage = "Failed to assign subscription";
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to assign subscription",
+        description: errorMessage,
       });
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -239,8 +245,15 @@ export default function Subscriptions() {
                 Duration will be automatically set from the selected plan. You can modify it if needed.
               </div>
             </div>
-            <Button onClick={handleAssignSubscription} className="w-full">
-              Assign Subscription
+            <Button onClick={handleAssignSubscription} className="w-full" disabled={assigning}>
+              {assigning ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Assigning...
+                </>
+              ) : (
+                "Assign Subscription"
+              )}
             </Button>
           </div>
         </DialogContent>

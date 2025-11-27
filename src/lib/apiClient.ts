@@ -125,13 +125,53 @@ class ApiClient {
         headers,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      // Check if response has JSON content
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          // If JSON parsing fails, create error from response
+          const error: ApiError = {
+            success: false,
+            statusCode: response.status,
+            message: `Failed to parse response: ${response.statusText}`,
+            error: 'Parse Error',
+            timestamp: new Date().toISOString(),
+            path: url,
+          };
+          throw error;
+        }
+      } else {
+        // If not JSON, create error from status
         const error: ApiError = {
           success: false,
           statusCode: response.status,
-          message: data.message || 'Request failed',
+          message: response.statusText || 'Request failed',
+          error: 'HTTP Error',
+          timestamp: new Date().toISOString(),
+          path: url,
+        };
+        throw error;
+      }
+
+      if (!response.ok) {
+        // Handle message as array or string
+        let errorMessage = 'Request failed';
+        if (data.message) {
+          if (Array.isArray(data.message)) {
+            // If message is an array, join them with newlines or take the first one
+            errorMessage = data.message.join('. ') || data.message[0] || 'Request failed';
+          } else if (typeof data.message === 'string') {
+            errorMessage = data.message;
+          }
+        }
+        
+        const error: ApiError = {
+          success: false,
+          statusCode: response.status,
+          message: errorMessage,
           error: data.error,
           timestamp: data.timestamp || new Date().toISOString(),
           path: data.path,
@@ -153,9 +193,11 @@ class ApiClient {
         };
       }
     } catch (error) {
-      if (error instanceof Error && 'statusCode' in error) {
+      // If it's already an ApiError (thrown from !response.ok), re-throw it
+      if (error && typeof error === 'object' && 'statusCode' in error && 'message' in error) {
         throw error;
       }
+      // If it's a network error or JSON parse error, create a proper ApiError
       throw {
         success: false,
         statusCode: 0,
