@@ -3,7 +3,31 @@
  * Handles authentication and base URL configuration
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// In development, use relative URLs to work with Vite proxy (avoids CORS)
+// In production, use the full URL from environment variable
+const getApiBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  
+  // In development mode, use relative URLs to leverage Vite proxy (avoids CORS issues)
+  if (import.meta.env.DEV) {
+    // Check if the env URL contains /apitest
+    if (envUrl && envUrl.includes('/apitest')) {
+      return '/apitest';
+    }
+    // Default to /api for development
+    return '/api';
+  }
+  
+  // In production, use the full URL from environment variable or fallback
+  if (envUrl) {
+    return envUrl;
+  }
+  
+  // Production fallback
+  return 'http://localhost:3000/api';
+};
+
+const API_BASE_URL = getApiBaseURL();
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -28,6 +52,12 @@ class ApiClient {
   constructor(baseURL: string = API_BASE_URL) {
     // Normalize base URL - remove trailing slashes
     const normalizedURL = baseURL.trim().replace(/\/+$/, '');
+    
+    // If using relative URLs (for Vite proxy in development), use as-is
+    if (normalizedURL.startsWith('/')) {
+      this.baseURL = normalizedURL;
+      return;
+    }
     
     // Only append /api for localhost (development) if URL doesn't contain /apitest
     // Production server (camsstaging.microlent.com/apitest) doesn't use /api prefix
