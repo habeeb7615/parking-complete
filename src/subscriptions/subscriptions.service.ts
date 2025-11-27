@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, LessThan } from 'typeorm';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 import { Profile } from '../entities/profile.entity';
+import { SubscriptionHistory } from '../entities/subscription-history.entity';
 import { randomUUID } from 'crypto';
 import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
 import { UpdateSubscriptionPlanDto } from './dto/update-subscription-plan.dto';
@@ -15,6 +16,8 @@ export class SubscriptionsService {
     private subscriptionPlanRepository: Repository<SubscriptionPlan>,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
+    @InjectRepository(SubscriptionHistory)
+    private subscriptionHistoryRepository: Repository<SubscriptionHistory>,
   ) {}
 
   async getSubscriptionPlans() {
@@ -149,6 +152,20 @@ export class SubscriptionsService {
 
     await this.profileRepository.save(profile);
 
+    // Save subscription history
+    const historyId = randomUUID();
+    const history = this.subscriptionHistoryRepository.create({
+      id: historyId,
+      contractor_id: contractorId,
+      subscription_plan_id: planId,
+      subscription_start_date: startDate,
+      subscription_end_date: endDate,
+      subscription_status: 'active',
+      action: 'assigned',
+      notes: `Subscription plan "${plan.name}" assigned for ${durationDays} days`,
+    });
+    await this.subscriptionHistoryRepository.save(history);
+
     return this.getContractorSubscription(contractorId);
   }
 
@@ -175,6 +192,21 @@ export class SubscriptionsService {
 
     await this.profileRepository.save(profile);
 
+    // Save subscription history
+    const plan = await this.getSubscriptionPlanById(profile.subscription_plan_id!);
+    const historyId = randomUUID();
+    const history = this.subscriptionHistoryRepository.create({
+      id: historyId,
+      contractor_id: contractorId,
+      subscription_plan_id: profile.subscription_plan_id,
+      subscription_start_date: profile.subscription_start_date,
+      subscription_end_date: newEndDate,
+      subscription_status: 'active',
+      action: 'extended',
+      notes: `Subscription extended by ${additionalDays} days`,
+    });
+    await this.subscriptionHistoryRepository.save(history);
+
     return this.getContractorSubscription(contractorId);
   }
 
@@ -191,6 +223,28 @@ export class SubscriptionsService {
     if (!profile.subscription_plan_id) {
       throw new NotFoundException('Contractor does not have any subscription assigned');
     }
+
+    // Save subscription history before unassigning
+    let planName = 'Unknown Plan';
+    try {
+      const plan = await this.getSubscriptionPlanById(profile.subscription_plan_id);
+      planName = plan.name;
+    } catch (error) {
+      // Plan might not exist, use default name
+    }
+
+    const historyId = randomUUID();
+    const history = this.subscriptionHistoryRepository.create({
+      id: historyId,
+      contractor_id: contractorId,
+      subscription_plan_id: profile.subscription_plan_id,
+      subscription_start_date: profile.subscription_start_date,
+      subscription_end_date: profile.subscription_end_date,
+      subscription_status: 'expired',
+      action: 'unassigned',
+      notes: `Subscription plan "${planName}" unassigned`,
+    });
+    await this.subscriptionHistoryRepository.save(history);
 
     // Unassign subscription by clearing subscription fields
     profile.subscription_plan_id = null;

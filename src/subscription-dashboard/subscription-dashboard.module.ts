@@ -5,6 +5,7 @@ import { SubscriptionDashboardService } from './subscription-dashboard.service';
 import { Profile } from '../entities/profile.entity';
 import { Payment } from '../entities/payment.entity';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
+import { SubscriptionHistory } from '../entities/subscription-history.entity';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { SubscriptionPlan } from '../entities/subscription-plan.entity';
       Profile,
       Payment,
       SubscriptionPlan,
+      SubscriptionHistory,
     ]),
   ],
   controllers: [SubscriptionDashboardController],

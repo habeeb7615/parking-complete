@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Profile } from '../entities/profile.entity';
 import { Payment } from '../entities/payment.entity';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
+import { SubscriptionHistory } from '../entities/subscription-history.entity';
 import { UserRole } from '../common/enums/user-role.enum';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class SubscriptionDashboardService {
     private paymentRepository: Repository<Payment>,
     @InjectRepository(SubscriptionPlan)
     private subscriptionPlanRepository: Repository<SubscriptionPlan>,
+    @InjectRepository(SubscriptionHistory)
+    private subscriptionHistoryRepository: Repository<SubscriptionHistory>,
   ) {}
 
   async getContractorSubscriptionDetails() {
@@ -151,25 +154,35 @@ export class SubscriptionDashboardService {
   }
 
   async getContractorSubscriptionHistory(contractorId: string) {
-    // This would typically come from a subscription history table
-    // For now, return current subscription info
+    // Verify contractor exists
     const profile = await this.profileRepository.findOne({
       where: { id: contractorId },
-      relations: ['subscription_plans'],
     });
 
     if (!profile) {
       return [];
     }
 
-    return [{
-      plan_id: profile.subscription_plan_id,
-      plan_name: profile.subscription_plans?.name || 'No Plan',
-      start_date: profile.subscription_start_date?.toISOString(),
-      end_date: profile.subscription_end_date?.toISOString(),
-      status: profile.subscription_status,
-      created_at: profile.created_on.toISOString(),
-    }];
+    // Fetch subscription history from subscription_history table
+    const history = await this.subscriptionHistoryRepository
+      .createQueryBuilder('history')
+      .leftJoinAndSelect('history.subscription_plan', 'plan')
+      .where('history.contractor_id = :contractorId', { contractorId })
+      .orderBy('history.created_at', 'DESC')
+      .getMany();
+
+    return history.map((item) => ({
+      id: item.id,
+      plan_id: item.subscription_plan_id,
+      plan_name: item.subscription_plan?.name || 'No Plan',
+      plan_price: item.subscription_plan?.price || 0,
+      start_date: item.subscription_start_date?.toISOString() || null,
+      end_date: item.subscription_end_date?.toISOString() || null,
+      status: item.subscription_status,
+      action: item.action, // 'assigned', 'extended', 'unassigned', 'expired'
+      notes: item.notes,
+      created_at: item.created_at.toISOString(),
+    }));
   }
 
   async getAllPaymentDetails() {
