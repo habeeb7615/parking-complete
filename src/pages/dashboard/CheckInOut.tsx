@@ -264,8 +264,10 @@ export default function CheckInOut() {
 
     setProcessing(true);
     try {
+      // Get current UTC time
+      const now = new Date();
       const checkoutData = {
-        check_out_time: new Date().toISOString(),
+        check_out_time: now.toISOString(), // Already in UTC format (ISO 8601 with Z suffix)
         payment_amount: 0, // Will be calculated by the API
         payment_method: paymentMethod,
       };

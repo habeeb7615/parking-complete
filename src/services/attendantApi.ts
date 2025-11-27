@@ -236,7 +236,9 @@ export class AttendantAPI {
       throw new Error(`Vehicle ${data.plate_number} is already parked at ${locationName}. Please check out the vehicle first before checking in again.`);
     }
 
-    const checkInTime = new Date().toISOString();
+    // Get current UTC time (same format as check-out)
+    const now = new Date();
+    const checkInTime = now.toISOString(); // UTC format (ISO 8601 with Z suffix)
     
     const { data: result, error } = await supabase
       .from('vehicles')

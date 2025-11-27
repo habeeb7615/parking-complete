@@ -106,11 +106,11 @@ export class ImageCheckInService {
           vehicle_type: vehicleData.vehicle_type,
           location_id: vehicleData.location_id,
           contractor_id: vehicleData.contractor_id,
-          check_in_time: new Date().toISOString(),
+          check_in_time: new Date().toISOString(), // UTC format (ISO 8601 with Z suffix) - same as check-out
           status: 'checked_in',
           receipt_id: vehicleData.receipt_id,
           created_by: vehicleData.contractor_id, // You might want to get this from auth
-          created_on: new Date().toISOString()
+          created_on: new Date().toISOString() // UTC format
         })
         .select()
         .single();

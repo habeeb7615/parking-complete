@@ -769,8 +769,10 @@ export default function Vehicles() {
     try {
       setLoading(true);
       console.log('Vehicles: Starting checkout API call...');
+      // Get current UTC time
+      const now = new Date();
       const checkoutData = {
-        check_out_time: new Date().toISOString(),
+        check_out_time: now.toISOString(), // Already in UTC format (ISO 8601 with Z suffix)
         payment_amount: data.payment_amount,
         payment_method: data.payment_method as 'cash' | 'card' | 'digital' | 'free'
       };
