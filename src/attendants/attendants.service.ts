@@ -425,6 +425,43 @@ export class AttendantsService {
   async updateAttendant(id: string, data: UpdateAttendantDto, updatedBy?: string): Promise<Attendant> {
     const attendant = await this.getAttendantById(id);
 
+    // If location_id is being updated, validate the new location and check limits
+    if (data.location_id !== undefined && data.location_id !== attendant.location_id) {
+      const newLocation = await this.locationRepository.findOne({
+        where: { id: data.location_id, is_deleted: false },
+      });
+
+      if (!newLocation) {
+        throw new NotFoundException('Location not found');
+      }
+
+      // If contractor_id is provided, verify it matches the location's contractor
+      if (data.contractor_id && newLocation.contractor_id !== data.contractor_id) {
+        throw new BadRequestException('Location does not belong to the specified contractor');
+      }
+
+      // Get contractor to check limits
+      const contractor = await this.contractorRepository.findOne({
+        where: { id: newLocation.contractor_id, is_deleted: false },
+      });
+
+      if (contractor) {
+        // Check attendants per location limit (excluding current attendant if moving from same location)
+        const attendantsAtLocation = await this.attendantRepository.count({
+          where: { location_id: data.location_id, is_deleted: false },
+        });
+
+        const allowedPerLocation = contractor.allowed_attendants_per_location || 0;
+        
+        // If moving to a new location, check if limit is reached
+        if (attendant.location_id !== data.location_id && attendantsAtLocation >= allowedPerLocation) {
+          throw new BadRequestException(
+            `This location has reached the maximum limit of ${allowedPerLocation} attendants. Current attendants: ${attendantsAtLocation}. Please update the contractor's allowed_attendants_per_location limit.`
+          );
+        }
+      }
+    }
+
     // Update attendant fields
     if (data.location_id !== undefined) attendant.location_id = data.location_id;
     if (data.status !== undefined) attendant.status = data.status;

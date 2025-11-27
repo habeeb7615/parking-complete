@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vehicle } from '../entities/vehicle.entity';
@@ -15,6 +15,22 @@ export class VehiclesService {
     @InjectRepository(Vehicle)
     private vehicleRepository: Repository<Vehicle>,
   ) {}
+
+  /**
+   * Get current UTC time
+   */
+  private getCurrentUTCTime(): Date {
+    const now = new Date();
+    return new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      now.getUTCHours(),
+      now.getUTCMinutes(),
+      now.getUTCSeconds(),
+      now.getUTCMilliseconds()
+    ));
+  }
 
   async getAllVehicles() {
     const vehicles = await this.vehicleRepository.find({
@@ -219,6 +235,9 @@ export class VehiclesService {
       throw new Error(`Vehicle ${data.plate_number} is already checked in`);
     }
 
+    // Get current UTC time
+    const utcNow = this.getCurrentUTCTime();
+
     const vehicleId = randomUUID();
     const vehicle = this.vehicleRepository.create({
       id: vehicleId,
@@ -229,12 +248,12 @@ export class VehiclesService {
       mobile_number: data.mobile_number || null,
       gate_in_id: data.gate_in_id || null,
       session_id: data.session_id || null,
-      check_in_time: new Date(),
+      check_in_time: utcNow,
       payment_status: 'pending',
       created_by: createdBy || null,
       is_deleted: false,
-      created_on: new Date(),
-      updated_on: new Date(),
+      created_on: utcNow,
+      updated_on: utcNow,
     });
 
     const savedVehicle = await this.vehicleRepository.save(vehicle);
@@ -250,7 +269,7 @@ export class VehiclesService {
     if (data.contractor_id !== undefined) vehicle.contractor_id = data.contractor_id;
     if (data.mobile_number !== undefined) vehicle.mobile_number = data.mobile_number;
     vehicle.updated_by = updatedBy || null;
-    vehicle.updated_on = new Date();
+    vehicle.updated_on = this.getCurrentUTCTime();
 
     await this.vehicleRepository.save(vehicle);
     return this.getVehicleById(id);
@@ -263,11 +282,39 @@ export class VehiclesService {
       throw new Error('Vehicle is already checked out');
     }
 
-    vehicle.check_out_time = new Date(checkoutData.check_out_time);
+    if (!vehicle.check_in_time) {
+      throw new BadRequestException('Vehicle check-in time is missing');
+    }
+
+    // Parse checkout time from payload (already in UTC format)
+    const checkoutTime = new Date(checkoutData.check_out_time);
+    const checkInTime = new Date(vehicle.check_in_time);
+
+    // Validate that checkout time is after check-in time
+    if (checkoutTime <= checkInTime) {
+      throw new BadRequestException(
+        `Check-out time (${checkoutTime.toISOString()}) must be after check-in time (${checkInTime.toISOString()})`
+      );
+    }
+
+    // Get current UTC time
+    const utcNow = this.getCurrentUTCTime();
+
+    // Use current UTC time if checkout time is in the future (more than 1 minute ahead)
+    const timeDifference = checkoutTime.getTime() - utcNow.getTime();
+    const oneMinuteInMs = 60 * 1000;
+
+    if (timeDifference > oneMinuteInMs) {
+      // If checkout time is more than 1 minute in the future, use current UTC time
+      vehicle.check_out_time = utcNow;
+    } else {
+      vehicle.check_out_time = checkoutTime;
+    }
+
     vehicle.payment_amount = checkoutData.payment_amount;
-    vehicle.payment_status = 'paid';
+    vehicle.payment_status = checkoutData.payment_method === 'free' ? 'free' : 'paid';
     vehicle.updated_by = updatedBy || null;
-    vehicle.updated_on = new Date();
+    vehicle.updated_on = utcNow;
 
     await this.vehicleRepository.save(vehicle);
     return this.getVehicleById(vehicleId);
@@ -278,7 +325,7 @@ export class VehiclesService {
 
     vehicle.is_deleted = true;
     vehicle.deleted_by = deletedBy || null;
-    vehicle.deleted_on = new Date();
+    vehicle.deleted_on = this.getCurrentUTCTime();
 
     await this.vehicleRepository.save(vehicle);
   }

@@ -21,8 +21,8 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       // synchronize: true only in development - it adds missing columns/tables, does NOT drop data
       // It's safe: only adds new columns, creates missing tables, never deletes existing data
-      synchronize: this.configService.get<string>('NODE_ENV') === 'development',
-      // synchronize: this.configService.get<string>('NODE_ENV') === 'production',
+      // synchronize: this.configService.get<string>('NODE_ENV') === 'development',
+      synchronize: this.configService.get<string>('NODE_ENV') === 'production',
       // migrations: ['dist/migrations/*.js'], // Uncomment for production migrations
       logging: this.configService.get<string>('NODE_ENV') === 'development',
       charset: 'utf8mb4',

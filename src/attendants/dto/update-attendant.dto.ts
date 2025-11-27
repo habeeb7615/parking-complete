@@ -27,6 +27,11 @@ export class UpdateAttendantDto {
   @IsOptional()
   location_id?: string;
 
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000', required: false })
+  @IsString()
+  @IsOptional()
+  contractor_id?: string;
+
   @ApiProperty({ example: 'active', enum: ['active', 'inactive'], required: false })
   @IsEnum(['active', 'inactive'], { message: 'Status must be either active or inactive' })
   @IsOptional()
