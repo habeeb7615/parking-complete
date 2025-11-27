@@ -178,6 +178,32 @@ export class SubscriptionsService {
     return this.getContractorSubscription(contractorId);
   }
 
+  async unassignSubscription(contractorId: string) {
+    const profile = await this.profileRepository.findOne({
+      where: { id: contractorId },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Contractor not found');
+    }
+
+    // Check if contractor has a subscription
+    if (!profile.subscription_plan_id) {
+      throw new NotFoundException('Contractor does not have any subscription assigned');
+    }
+
+    // Unassign subscription by clearing subscription fields
+    profile.subscription_plan_id = null;
+    profile.subscription_start_date = null;
+    profile.subscription_end_date = null;
+    profile.subscription_status = 'expired';
+    profile.updated_on = new Date();
+
+    await this.profileRepository.save(profile);
+
+    return { message: 'Subscription unassigned successfully' };
+  }
+
   async getExpiringSubscriptions(daysThreshold: number = 7) {
     const thresholdDate = new Date();
     thresholdDate.setDate(thresholdDate.getDate() + daysThreshold);

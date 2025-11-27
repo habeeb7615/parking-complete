@@ -122,6 +122,20 @@ export class SubscriptionsController {
     return this.subscriptionsService.extendSubscription(contractorId, data.additionalDays);
   }
 
+  @Get('unassign/:contractorId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Unassign subscription', description: 'Remove subscription from a contractor' })
+  @ApiParam({ name: 'contractorId', description: 'Contractor ID', type: 'string' })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Subscription unassigned successfully',
+  })
+  @ApiErrorResponse(404, 'Contractor not found or no subscription assigned')
+  async unassignSubscription(@Param('contractorId') contractorId: string) {
+    return this.subscriptionsService.unassignSubscription(contractorId);
+  }
+
   @Get('expiring')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
