@@ -27,18 +27,23 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       logging: this.configService.get<string>('NODE_ENV') === 'development',
       charset: 'utf8mb4',
       timezone: '+00:00',
-      // Connection pool settings to prevent ECONNRESET errors
+      // Connection pool settings to prevent ECONNRESET and ETIMEDOUT errors
       extra: {
         connectionLimit: 10,
-        acquireTimeout: 60000,
-        timeout: 60000,
-        reconnect: true,
+        // Connection timeout settings (in milliseconds)
+        connectTimeout: 60000, // 60 seconds to establish connection (increased from default)
         // Keep connections alive to prevent MySQL from closing idle connections
         keepAliveInitialDelay: 0,
         enableKeepAlive: true,
         // Additional MySQL connection options
         multipleStatements: false,
         dateStrings: false,
+        // Retry connection on failure
+        reconnect: true,
+        // Queue timeout - how long to wait for a connection from pool
+        queueLimit: 0, // Unlimited queue
+        // Socket timeout - how long to wait for response from MySQL
+        socketTimeout: 60000, // 60 seconds
       },
       // Retry connection on failure
       maxQueryExecutionTime: 60000,
