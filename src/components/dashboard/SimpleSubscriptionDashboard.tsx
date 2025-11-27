@@ -639,7 +639,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
       </div>
 
       {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <MetricCard
           title="Total Plan Value"
           value={`₹${totalPlanAmount}`}
@@ -679,7 +679,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
           icon={Calendar}
           variant="info"
         />
-      </div>
+      </div> */}
 
       {/* Available Plans */}
       <Card>
