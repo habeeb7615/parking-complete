@@ -158,6 +158,7 @@ export class SubscriptionAPI {
     };
   }
 
+  
   // Unassign subscription from contractor
   static async unassignSubscription(contractorId: string): Promise<void> {
     await apiClient.get(`/subscriptions/unassign/${contractorId}`);
