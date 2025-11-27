@@ -566,7 +566,7 @@ const Attendants = memo(function Attendants() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
                     </TableHead>
-                    {(isSuperAdmin || isContractor || isAttendant) && <TableHead>Actions</TableHead>}
+                    {(isSuperAdmin || isContractor) && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -582,7 +582,7 @@ const Attendants = memo(function Attendants() {
                           {attendant.status || 'inactive'}
                         </Badge>
                       </TableCell>
-                      {(isSuperAdmin || isContractor || isAttendant) && (
+                      {(isSuperAdmin || isContractor) && (
                         <TableCell>
                           <div className="flex gap-2">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(attendant)} disabled={deletingId !== null}>

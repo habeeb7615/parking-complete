@@ -25,6 +25,7 @@ export interface Profile {
   subscription_start_date?: string;
   subscription_end_date?: string;
   subscription_status?: 'active' | 'expired' | 'suspended';
+  created_on?: string;
 }
 
 export class AuthAPI {

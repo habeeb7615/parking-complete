@@ -181,7 +181,7 @@ export default function Profile() {
         />
         <MetricCard
           title="Member Since"
-          value={formatDate(user?.created_at || "")}
+          value={profile.created_on ? formatDate(profile.created_on) : (user?.created_at ? formatDate(user.created_at) : "N/A")}
           description="Account creation date"
           icon={Calendar}
           variant="default"
@@ -331,7 +331,7 @@ export default function Profile() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Account Created</span>
                 <span className="text-sm text-muted-foreground">
-                  {formatDate(user?.created_at || "")}
+                  {profile.created_on ? formatDate(profile.created_on) : (user?.created_at ? formatDate(user.created_at) : "N/A")}
                 </span>
               </div>
               <div className="flex items-center justify-between">

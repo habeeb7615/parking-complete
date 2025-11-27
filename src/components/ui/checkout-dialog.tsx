@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { Button } from './button';
 import { Input } from './input';
@@ -41,35 +41,166 @@ export function CheckoutDialog({
   loading = false
 }: CheckoutDialogProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
-  const [calculation, setCalculation] = useState<any>(null);
-
-  useEffect(() => {
-    if (vehicle && contractorRates) {
+  
+  // Use useMemo to prevent hydration errors - only calculate when dialog is open and data is available
+  const calculation = useMemo(() => {
+    console.log('CheckoutDialog: Calculation useMemo triggered', { 
+      isOpen, 
+      vehicle: !!vehicle, 
+      contractorRates: !!contractorRates,
+      contractorRatesData: contractorRates 
+    });
+    
+    if (!isOpen || !vehicle || !contractorRates) {
+      console.log('CheckoutDialog: Missing required data', { 
+        isOpen, 
+        hasVehicle: !!vehicle, 
+        hasContractorRates: !!contractorRates 
+      });
+      return null;
+    }
+    
+    try {
       const rates = vehicle.vehicle_type === '2-wheeler' 
         ? contractorRates.rates_2wheeler 
         : contractorRates.rates_4wheeler;
       
-      const calc = calculateParkingFee(
+      console.log('CheckoutDialog: Selected rates', { 
+        vehicleType: vehicle.vehicle_type, 
+        rates,
+        hasRates: !!rates 
+      });
+      
+      if (!rates) {
+        console.error('CheckoutDialog: Rates are null or undefined', { 
+          vehicleType: vehicle.vehicle_type,
+          contractorRates 
+        });
+        return null;
+      }
+      
+      // Check if rates have required properties
+      if (!rates.upTo2Hours && rates.upTo2Hours !== 0) {
+        console.error('CheckoutDialog: Rates structure is invalid', rates);
+        return null;
+      }
+      
+      // Use Date.now() instead of new Date() to avoid hydration issues
+      const currentTime = Date.now();
+      const checkOutTime = new Date(currentTime).toISOString();
+      
+      console.log('CheckoutDialog: Calling calculateParkingFee', {
+        checkInTime: vehicle.check_in_time,
+        checkOutTime,
+        vehicleType: vehicle.vehicle_type
+      });
+      
+      const result = calculateParkingFee(
         vehicle.check_in_time,
-        new Date().toISOString(),
+        checkOutTime,
         vehicle.vehicle_type,
         rates
       );
-      setCalculation(calc);
+      
+      console.log('CheckoutDialog: Calculation result', result);
+      return result;
+    } catch (error) {
+      console.error('CheckoutDialog: Error calculating parking fee:', error);
+      return null;
     }
-  }, [vehicle, contractorRates]);
+  }, [isOpen, vehicle, contractorRates]);
 
   const handleConfirm = () => {
-    if (calculation) {
+    console.log('CheckoutDialog: handleConfirm called', { calculation, vehicle, contractorRates });
+    
+    if (!calculation) {
+      console.error('CheckoutDialog: Calculation is null, cannot proceed');
+      return;
+    }
+    
+    if (!vehicle) {
+      console.error('CheckoutDialog: Vehicle is null, cannot proceed');
+      return;
+    }
+    
+    try {
       onConfirm({
         payment_amount: calculation.amount,
         payment_method: paymentMethod
       });
+    } catch (error) {
+      console.error('CheckoutDialog: Error in handleConfirm', error);
     }
   };
 
-  if (!vehicle || !calculation) {
+  // Show loading state if calculation is not ready
+  if (!vehicle) {
     return null;
+  }
+  
+  if (!contractorRates) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Check Out Vehicle</DialogTitle>
+            <DialogDescription>
+              Error: Contractor rates not available
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 text-center text-red-600">
+            Unable to calculate parking fee. Please try again.
+          </div>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  
+  if (!calculation) {
+    // Check if it's a data issue or calculation issue
+    const hasRates = contractorRates && (
+      (vehicle?.vehicle_type === '2-wheeler' && contractorRates.rates_2wheeler) ||
+      (vehicle?.vehicle_type === '4-wheeler' && contractorRates.rates_4wheeler)
+    );
+    
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Check Out Vehicle</DialogTitle>
+            <DialogDescription>
+              {hasRates ? 'Calculating parking fee...' : 'Error: Parking rates not configured'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 text-center">
+            {hasRates ? (
+              <>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-parkflow-blue mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Please wait...</p>
+              </>
+            ) : (
+              <>
+                <div className="text-red-600 mb-4">
+                  <p className="font-semibold">Unable to calculate parking fee</p>
+                  <p className="text-sm mt-2">Parking rates are not configured for this vehicle type.</p>
+                  <p className="text-xs mt-2 text-muted-foreground">
+                    Please contact your contractor to set up parking rates.
+                  </p>
+                </div>
+                <Button variant="outline" onClick={onClose}>
+                  Close
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
