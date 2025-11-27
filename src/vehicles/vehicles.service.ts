@@ -209,11 +209,15 @@ export class VehiclesService {
   }
 
   async getVehiclesByLocation(locationId: string) {
-    const vehicles = await this.vehicleRepository.find({
-      where: { location_id: locationId, is_deleted: false },
-      relations: ['parking_locations', 'contractors'],
-      order: { check_in_time: 'DESC' },
-    });
+    // Use query builder to ensure DESC order
+    const vehicles = await this.vehicleRepository
+      .createQueryBuilder('vehicle')
+      .leftJoinAndSelect('vehicle.parking_locations', 'location')
+      .leftJoinAndSelect('vehicle.contractors', 'contractor')
+      .where('vehicle.location_id = :locationId', { locationId })
+      .andWhere('vehicle.is_deleted = :isDeleted', { isDeleted: false })
+      .orderBy('vehicle.check_in_time', 'DESC')
+      .getMany();
 
     return vehicles.map((vehicle) => ({
       ...vehicle,
@@ -286,30 +290,68 @@ export class VehiclesService {
       throw new BadRequestException('Vehicle check-in time is missing');
     }
 
-    // Parse checkout time from payload (already in UTC format)
-    const checkoutTime = new Date(checkoutData.check_out_time);
-    const checkInTime = new Date(vehicle.check_in_time);
-
-    // Validate that checkout time is after check-in time
-    if (checkoutTime <= checkInTime) {
-      throw new BadRequestException(
-        `Check-out time (${checkoutTime.toISOString()}) must be after check-in time (${checkInTime.toISOString()})`
-      );
-    }
+    // Preserve original check-in time (convert to UTC to ensure consistency)
+    const originalCheckInTime = new Date(vehicle.check_in_time);
+    const preservedCheckInTime = new Date(Date.UTC(
+      originalCheckInTime.getUTCFullYear(),
+      originalCheckInTime.getUTCMonth(),
+      originalCheckInTime.getUTCDate(),
+      originalCheckInTime.getUTCHours(),
+      originalCheckInTime.getUTCMinutes(),
+      originalCheckInTime.getUTCSeconds(),
+      originalCheckInTime.getUTCMilliseconds()
+    ));
 
     // Get current UTC time
     const utcNow = this.getCurrentUTCTime();
+    const checkInTime = preservedCheckInTime;
 
-    // Use current UTC time if checkout time is in the future (more than 1 minute ahead)
-    const timeDifference = checkoutTime.getTime() - utcNow.getTime();
-    const oneMinuteInMs = 60 * 1000;
+    // Always use current UTC time for checkout to avoid timezone issues
+    // Frontend should not send checkout time - it should be set automatically
+    let checkoutTime = utcNow;
 
-    if (timeDifference > oneMinuteInMs) {
-      // If checkout time is more than 1 minute in the future, use current UTC time
-      vehicle.check_out_time = utcNow;
-    } else {
-      vehicle.check_out_time = checkoutTime;
+    // If frontend sends a checkout time, validate it
+    if (checkoutData.check_out_time) {
+      try {
+        const parsedTime = new Date(checkoutData.check_out_time);
+        
+        // Only use frontend time if it's valid and after check-in time
+        if (!isNaN(parsedTime.getTime()) && parsedTime > checkInTime) {
+          // Convert to UTC to ensure consistency
+          checkoutTime = new Date(Date.UTC(
+            parsedTime.getUTCFullYear(),
+            parsedTime.getUTCMonth(),
+            parsedTime.getUTCDate(),
+            parsedTime.getUTCHours(),
+            parsedTime.getUTCMinutes(),
+            parsedTime.getUTCSeconds(),
+            parsedTime.getUTCMilliseconds()
+          ));
+          
+          // Ensure checkout time is not more than 1 minute in the future
+          const timeDifference = checkoutTime.getTime() - utcNow.getTime();
+          const oneMinuteInMs = 60 * 1000;
+          
+          if (timeDifference > oneMinuteInMs) {
+            // If checkout time is more than 1 minute in the future, use current UTC time
+            checkoutTime = utcNow;
+          }
+        }
+      } catch (error) {
+        // If parsing fails, use current UTC time
+        checkoutTime = utcNow;
+      }
     }
+
+    // Final validation: checkout time must be after check-in time
+    if (checkoutTime <= checkInTime) {
+      checkoutTime = utcNow;
+    }
+
+    // Store checkout time as UTC
+    // IMPORTANT: Preserve original check-in time - do not let it be modified
+    vehicle.check_out_time = checkoutTime;
+    vehicle.check_in_time = preservedCheckInTime; // Explicitly preserve check-in time
 
     vehicle.payment_amount = checkoutData.payment_amount;
     vehicle.payment_status = checkoutData.payment_method === 'free' ? 'free' : 'paid';
