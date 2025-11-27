@@ -105,14 +105,14 @@ export class SubscriptionAPI {
 
   // Get contractors with expiring subscriptions
   static async getExpiringSubscriptions(daysThreshold: number = 7): Promise<any[]> {
-    const response = await apiClient.get('/subscriptions/expiring', { days: daysThreshold });
-    return response.data || [];
+    const response = await apiClient.get<any[]>('/subscriptions/expiring', { days: daysThreshold });
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   // Get expired subscriptions
   static async getExpiredSubscriptions(): Promise<any[]> {
-    const response = await apiClient.get('/subscriptions/expired');
-    return response.data || [];
+    const response = await apiClient.get<any[]>('/subscriptions/expired');
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   // Update subscription plan
@@ -144,7 +144,22 @@ export class SubscriptionAPI {
     last7DaysRevenue: number;
     lastMonthRevenue: number;
   }> {
-    const response = await apiClient.get('/subscriptions/financial-summary');
-    return response.data;
+    const response = await apiClient.get<{
+      todayAssignments: number;
+      todayRevenue: number;
+      last7DaysRevenue: number;
+      lastMonthRevenue: number;
+    }>('/subscriptions/financial-summary');
+    return response.data || {
+      todayAssignments: 0,
+      todayRevenue: 0,
+      last7DaysRevenue: 0,
+      lastMonthRevenue: 0
+    };
+  }
+
+  // Unassign subscription from contractor
+  static async unassignSubscription(contractorId: string): Promise<void> {
+    await apiClient.get(`/subscriptions/unassign/${contractorId}`);
   }
 }

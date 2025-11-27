@@ -17,7 +17,8 @@ import {
   Trash2,
   Save,
   X,
-  CalendarPlus
+  CalendarPlus,
+  Loader2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -55,7 +56,8 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
   const [planForm, setPlanForm] = useState({
     name: '',
     price: 0,
-    days: 0
+    days: 0,
+    features: {} as any
   });
   
   // Extend subscription states
@@ -75,6 +77,11 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
   const [historyPage, setHistoryPage] = useState(1);
   const [historyPageSize, setHistoryPageSize] = useState(5);
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  
+  // Unassign subscription states
+  const [showUnassignDialog, setShowUnassignDialog] = useState(false);
+  const [contractorToUnassign, setContractorToUnassign] = useState<any | null>(null);
+  const [unassigning, setUnassigning] = useState(false);
   
   const { toast } = useToast();
 
@@ -230,7 +237,8 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
     setPlanForm({
       name: plan.name,
       price: plan.price,
-      days: plan.days || plan.duration_days || 30
+      days: plan.days || plan.duration_days || 30,
+      features: plan.features || {}
     });
     setShowEditDialog(true);
   };
@@ -240,7 +248,8 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
     setPlanForm({
       name: '',
       price: 0,
-      days: 30
+      days: 30,
+      features: {}
     });
     setShowCreateDialog(true);
   };
@@ -249,14 +258,24 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
     try {
       if (editingPlan) {
         // Update existing plan
-        await SubscriptionAPI.updateSubscriptionPlan(editingPlan.id, planForm);
+        await SubscriptionAPI.updateSubscriptionPlan(editingPlan.id, {
+          name: planForm.name,
+          price: planForm.price,
+          days: planForm.days,
+          features: planForm.features
+        });
         toast({
           title: "Success",
           description: "Plan updated successfully"
         });
       } else {
         // Create new plan
-        await SubscriptionAPI.createSubscriptionPlan(planForm);
+        await SubscriptionAPI.createSubscriptionPlan({
+          name: planForm.name,
+          price: planForm.price,
+          days: planForm.days,
+          features: planForm.features
+        });
         toast({
           title: "Success",
           description: "Plan created successfully"
@@ -311,6 +330,40 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
     setSelectedPlanId(contractor.profiles?.subscription_plan_id || '');
     setExtendMode('extend'); // Default to extend mode
     setShowExtendDialog(true);
+  };
+
+  const handleUnassignSubscription = (contractor: any) => {
+    setContractorToUnassign(contractor);
+    setShowUnassignDialog(true);
+  };
+
+  const confirmUnassignSubscription = async () => {
+    if (!contractorToUnassign) {
+      return;
+    }
+
+    setUnassigning(true);
+    try {
+      await SubscriptionAPI.unassignSubscription(contractorToUnassign.user_id);
+      toast({
+        title: "Success",
+        description: `Subscription unassigned successfully for ${contractorToUnassign.company_name}`,
+      });
+      setShowUnassignDialog(false);
+      setContractorToUnassign(null);
+      // Refresh data after unassign
+      setTimeout(async () => {
+        await fetchData(true);
+      }, 1000);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error?.message || "Failed to unassign subscription",
+      });
+    } finally {
+      setUnassigning(false);
+    }
   };
 
   const confirmExtendSubscription = async () => {
@@ -847,6 +900,15 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
                             </Tooltip>
                           );
                         })()}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUnassignSubscription(contractor)}
+                          className="text-red-600 border-red-300 hover:bg-red-100 hover:border-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Unassign
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1145,6 +1207,36 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Unassign Subscription Dialog */}
+      <AlertDialog open={showUnassignDialog} onOpenChange={setShowUnassignDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unassign Subscription</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unassign the subscription from {contractorToUnassign?.company_name}? 
+              This action will remove their current subscription plan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={unassigning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmUnassignSubscription}
+              disabled={unassigning}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {unassigning ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Unassigning...
+                </>
+              ) : (
+                'Unassign'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Subscription History Dialog */}
       <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
