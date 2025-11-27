@@ -43,10 +43,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error = exception.name;
     }
 
+    // Format message: if array has single item, convert to string; if multiple items, keep as array; if string, keep as string
+    let formattedMessage: string | string[];
+    if (Array.isArray(message)) {
+      // If array has only one item, convert to string for consistency
+      formattedMessage = message.length === 1 ? message[0] : message;
+    } else {
+      // If it's already a string, keep it as string
+      formattedMessage = message;
+    }
+
     const errorResponse: ErrorResponse = {
       success: false,
       statusCode: status,
-      message: Array.isArray(message) ? message : [message],
+      message: formattedMessage,
       error: error || HttpStatus[status],
       timestamp: new Date().toISOString(),
       path: request.url,

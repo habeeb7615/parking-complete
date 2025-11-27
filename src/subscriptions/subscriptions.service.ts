@@ -118,7 +118,19 @@ export class SubscriptionsService {
       throw new NotFoundException('Contractor not found');
     }
 
+    // Check if contractor already has an active subscription
     const now = new Date();
+    const hasActiveSubscription = 
+      profile.subscription_status === 'active' &&
+      profile.subscription_end_date &&
+      new Date(profile.subscription_end_date) > now;
+
+    if (hasActiveSubscription) {
+      throw new ConflictException(
+        'Contractor already has an active subscription plan. Please extend the current subscription or wait until it expires.'
+      );
+    }
+
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + durationDays);
 
