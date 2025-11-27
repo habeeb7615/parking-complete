@@ -338,7 +338,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
   };
 
   const confirmUnassignSubscription = async () => {
-    if (!contractorToUnassign) {
+    if (!contractorToUnassign || unassigning) {
       return;
     }
 
@@ -349,6 +349,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
         title: "Success",
         description: `Subscription unassigned successfully for ${contractorToUnassign.company_name}`,
       });
+      // Close modal only on success
       setShowUnassignDialog(false);
       setContractorToUnassign(null);
       // Refresh data after unassign
@@ -361,7 +362,9 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
         title: "Error",
         description: error?.message || "Failed to unassign subscription",
       });
+      // On error, keep modal open (don't close it)
     } finally {
+      // Always reset loading state to prevent UI from getting stuck
       setUnassigning(false);
     }
   };
@@ -1209,7 +1212,16 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
       </Dialog>
 
       {/* Unassign Subscription Dialog */}
-      <AlertDialog open={showUnassignDialog} onOpenChange={setShowUnassignDialog}>
+      <AlertDialog 
+        open={showUnassignDialog} 
+        onOpenChange={(open) => {
+          // Prevent closing modal during unassigning
+          if (!open && !unassigning) {
+            setShowUnassignDialog(false);
+            setContractorToUnassign(null);
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Unassign Subscription</AlertDialogTitle>
@@ -1220,10 +1232,10 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={unassigning}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <Button
               onClick={confirmUnassignSubscription}
               disabled={unassigning}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
               {unassigning ? (
                 <>
@@ -1233,7 +1245,7 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
               ) : (
                 'Unassign'
               )}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
