@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Edit, Trash2, Building, Phone, Mail, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Building, Phone, Mail, ArrowUpDown, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SuperAdminAPI } from '@/services/superAdminApi';
 
@@ -64,7 +64,7 @@ export function ContractorsList({ contractors, onEdit, onRefresh, onSort, sortBy
   const { toast } = useToast();
 
   const handleDelete = async () => {
-    if (!deleteContractor) return;
+    if (!deleteContractor || isDeleting) return;
 
     setIsDeleting(true);
     try {
@@ -73,6 +73,9 @@ export function ContractorsList({ contractors, onEdit, onRefresh, onSort, sortBy
         title: 'Success',
         description: 'Contractor deleted successfully',
       });
+      // Close modal only on success
+      setDeleteContractor(null);
+      // Refresh contractors list
       onRefresh();
     } catch (error: any) {
       toast({
@@ -80,9 +83,10 @@ export function ContractorsList({ contractors, onEdit, onRefresh, onSort, sortBy
         description: error.message || 'Failed to delete contractor',
         variant: 'destructive',
       });
+      // On error, keep modal open (don't close it)
     } finally {
+      // Always reset loading state to prevent UI from getting stuck
       setIsDeleting(false);
-      setDeleteContractor(null);
     }
   };
 
@@ -316,7 +320,15 @@ export function ContractorsList({ contractors, onEdit, onRefresh, onSort, sortBy
         ))}
       </div>
 
-      <AlertDialog open={!!deleteContractor} onOpenChange={() => setDeleteContractor(null)}>
+      <AlertDialog 
+        open={!!deleteContractor} 
+        onOpenChange={(open) => {
+          // Prevent closing modal during deletion
+          if (!open && !isDeleting) {
+            setDeleteContractor(null);
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Contractor</AlertDialogTitle>
@@ -325,14 +337,21 @@ export function ContractorsList({ contractors, onEdit, onRefresh, onSort, sortBy
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <Button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
