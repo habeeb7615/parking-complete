@@ -60,16 +60,15 @@ export interface PaymentDetails {
 
 export interface SubscriptionHistory {
   id: string;
-  action: string;
+  plan_id: string;
   plan_name: string;
-  previous_plan_name?: string;
-  new_start_date: string;
-  new_end_date: string;
-  previous_start_date?: string;
-  previous_end_date?: string;
-  duration_days: number;
-  amount_paid: number;
-  created_on: string;
+  plan_price: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+  action: string; // "assigned", "extended", "unassigned"
+  notes: string;
+  created_at: string;
 }
 
 export class SubscriptionDashboardAPI {

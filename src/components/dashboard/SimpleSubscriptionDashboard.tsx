@@ -1259,53 +1259,64 @@ export function SimpleSubscriptionDashboard({ onAssignSubscription }: SimpleSubs
             </div>
           ) : (
             <div className="space-y-4">
-              {subscriptionHistory.map((history, index) => (
-                <Card key={history.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant={
-                          history.action === 'assigned' ? 'default' :
-                          history.action === 'extended' ? 'secondary' :
-                          history.action === 'cancelled' ? 'destructive' : 'outline'
-                        }>
-                          {history.action.charAt(0).toUpperCase() + history.action.slice(1)}
-                        </Badge>
-                        <span className="font-medium">{history.plan_name}</span>
-                        {history.previous_plan_name && (
-                          <span className="text-muted-foreground">
-                            (from {history.previous_plan_name})
-                          </span>
+              {subscriptionHistory.map((history, index) => {
+                // Calculate duration in days
+                const startDate = new Date(history.start_date);
+                const endDate = new Date(history.end_date);
+                const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                return (
+                  <Card key={history.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant={
+                            history.action === 'assigned' ? 'default' :
+                            history.action === 'extended' ? 'secondary' :
+                            history.action === 'unassigned' ? 'destructive' : 'outline'
+                          }>
+                            {history.action.charAt(0).toUpperCase() + history.action.slice(1)}
+                          </Badge>
+                          <span className="font-medium">{history.plan_name}</span>
+                          <Badge variant={history.status === 'active' ? 'default' : 'secondary'} className="ml-2">
+                            {history.status}
+                          </Badge>
+                        </div>
+                        
+                        {history.notes && (
+                          <div className="mb-3 text-sm text-muted-foreground italic">
+                            {history.notes}
+                          </div>
                         )}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="font-medium text-muted-foreground">Start Date</div>
+                            <div>{formatDate(history.start_date)}</div>
+                          </div>
+                          <div>
+                            <div className="font-medium text-muted-foreground">End Date</div>
+                            <div>{formatDate(history.end_date)}</div>
+                          </div>
+                          <div>
+                            <div className="font-medium text-muted-foreground">Duration</div>
+                            <div>{durationDays} days</div>
+                          </div>
+                          <div>
+                            <div className="font-medium text-muted-foreground">Plan Price</div>
+                            <div className="font-semibold text-green-600">₹{history.plan_price}</div>
+                          </div>
+                        </div>
+                        
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <div className="font-medium text-muted-foreground">Start Date</div>
-                          <div>{formatDate(history.new_start_date)}</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-muted-foreground">End Date</div>
-                          <div>{formatDate(history.new_end_date)}</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-muted-foreground">Duration</div>
-                          <div>{history.duration_days} days</div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-muted-foreground">Amount Paid</div>
-                          <div className="font-semibold text-green-600">₹{history.amount_paid}</div>
-                        </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div>{formatDate(history.created_at)}</div>
                       </div>
-                      
                     </div>
-                    
-                    <div className="text-right text-sm text-muted-foreground">
-                      <div>{formatDate(history.created_on)}</div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
               
               {/* Pagination Controls */}
               {historyTotalPages > 1 && (
