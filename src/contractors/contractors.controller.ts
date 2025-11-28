@@ -65,7 +65,7 @@ export class ContractorsController {
   @ApiOperation({ summary: 'Create contractor', description: 'Create a new contractor with profile' })
   @ApiBody({ type: CreateContractorDto })
   @ApiResponse({ status: 201, description: 'Contractor created successfully' })
-  @ApiResponse({ status: 409, description: 'Email already exists' })
+  @ApiResponse({ status: 409, description: 'Duplicate entry: Email, User name, Phone number, or Contact number already exists' })
   async createContractor(@Body() data: CreateContractorDto, @Request() req) {
     return this.contractorsService.createContractor(data, req.user?.id);
   }
@@ -78,6 +78,7 @@ export class ContractorsController {
   @ApiBody({ type: UpdateContractorDto })
   @ApiResponse({ status: 200, description: 'Contractor updated successfully' })
   @ApiResponse({ status: 404, description: 'Contractor not found' })
+  @ApiResponse({ status: 409, description: 'Duplicate entry: Email, User name, Phone number, or Contact number already exists' })
   async updateContractor(@Param('id') id: string, @Body() data: UpdateContractorDto, @Request() req) {
     return this.contractorsService.updateContractor(id, data, req.user?.id);
   }

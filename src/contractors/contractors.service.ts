@@ -223,12 +223,41 @@ export class ContractorsService {
 
   async createContractor(data: CreateContractorDto, createdBy?: string): Promise<Contractor> {
     // Check if email already exists
-    const existingProfile = await this.profileRepository.findOne({
+    const existingProfileByEmail = await this.profileRepository.findOne({
       where: { email: data.email, is_deleted: false },
     });
 
-    if (existingProfile) {
+    if (existingProfileByEmail) {
       throw new ConflictException('Email already exists');
+    }
+
+    // Check if user_name already exists
+    const existingProfileByUserName = await this.profileRepository.findOne({
+      where: { user_name: data.user_name, is_deleted: false },
+    });
+
+    if (existingProfileByUserName) {
+      throw new ConflictException('User name already exists');
+    }
+
+    // Check if phone_number already exists (if provided)
+    if (data.phone_number) {
+      const existingProfileByPhone = await this.profileRepository.findOne({
+        where: { phone_number: data.phone_number, is_deleted: false },
+      });
+
+      if (existingProfileByPhone) {
+        throw new ConflictException('Phone number already exists');
+      }
+    }
+
+    // Check if contact_number already exists in contractors
+    const existingContractorByContact = await this.contractorRepository.findOne({
+      where: { contact_number: data.contact_number, is_deleted: false },
+    });
+
+    if (existingContractorByContact) {
+      throw new ConflictException('Contact number already exists');
     }
 
     // Hash password
@@ -277,6 +306,50 @@ export class ContractorsService {
 
   async updateContractor(id: string, data: UpdateContractorDto, updatedBy?: string): Promise<Contractor> {
     const contractor = await this.getContractorById(id);
+
+    // Check for duplicate email (if being updated)
+    if (data.email) {
+      const existingProfileByEmail = await this.profileRepository.findOne({
+        where: { email: data.email, is_deleted: false },
+      });
+
+      if (existingProfileByEmail && existingProfileByEmail.id !== contractor.user_id) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    // Check for duplicate user_name (if being updated)
+    if (data.user_name) {
+      const existingProfileByUserName = await this.profileRepository.findOne({
+        where: { user_name: data.user_name, is_deleted: false },
+      });
+
+      if (existingProfileByUserName && existingProfileByUserName.id !== contractor.user_id) {
+        throw new ConflictException('User name already exists');
+      }
+    }
+
+    // Check for duplicate phone_number (if being updated)
+    if (data.phone_number) {
+      const existingProfileByPhone = await this.profileRepository.findOne({
+        where: { phone_number: data.phone_number, is_deleted: false },
+      });
+
+      if (existingProfileByPhone && existingProfileByPhone.id !== contractor.user_id) {
+        throw new ConflictException('Phone number already exists');
+      }
+    }
+
+    // Check for duplicate contact_number (if being updated)
+    if (data.contact_number) {
+      const existingContractorByContact = await this.contractorRepository.findOne({
+        where: { contact_number: data.contact_number, is_deleted: false },
+      });
+
+      if (existingContractorByContact && existingContractorByContact.id !== id) {
+        throw new ConflictException('Contact number already exists');
+      }
+    }
 
     // Update contractor fields
     if (data.company_name !== undefined) contractor.company_name = data.company_name;
