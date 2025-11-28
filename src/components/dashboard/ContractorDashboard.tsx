@@ -297,7 +297,7 @@ const ContractorDashboard = memo(function ContractorDashboard() {
 
       // Add payment activities
       recentPayments?.forEach(payment => {
-        const timeAgo = getTimeAgo(payment.created_at || payment.created_on || '');
+        const timeAgo = getTimeAgo(payment.created_at || '');
         const plateNumber = payment.vehicle?.plate_number || 'Unknown';
         activities.push({
           id: `payment-${payment.id}`,
@@ -305,7 +305,7 @@ const ContractorDashboard = memo(function ContractorDashboard() {
           title: 'Payment received',
           description: `₹${(payment.amount || 0).toFixed(2)} from Vehicle ${plateNumber}`,
           timeAgo,
-          timestamp: payment.created_at || payment.created_on || '',
+          timestamp: payment.created_at || '',
           icon: 'orange'
         });
       });
