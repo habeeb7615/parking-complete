@@ -474,10 +474,10 @@ const ContractorDashboard = memo(function ContractorDashboard() {
         />
         <MetricCard
           title="Occupancy Rate"
-          value={`${stats.occupancyRate}%`}
+          value={`${(stats.occupancyRate || 0).toFixed(1)}%`}
           description="Current utilization"
           icon={BarChart3}
-          variant={stats.occupancyRate > 80 ? "danger" : stats.occupancyRate > 60 ? "warning" : "success"}
+          variant={(stats.occupancyRate || 0) > 80 ? "danger" : (stats.occupancyRate || 0) > 60 ? "warning" : "success"}
         />
       </div>
 
