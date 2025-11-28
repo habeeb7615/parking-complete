@@ -16,36 +16,32 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const { signIn, user, profile, signOut } = useAuth();
+  const { signIn, user, profile, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const role = searchParams.get("role") || "";
 
   useEffect(() => {
-    console.log('Login useEffect triggered:', { user: user?.id, profile: profile?.id, role, loading });
+    // Wait for auth to finish loading before checking authentication status
+    if (authLoading) {
+      return;
+    }
+
+    console.log('Login useEffect triggered:', { user: user?.id, profile: profile?.id, role });
     
-    // Only redirect if user is properly authenticated and profile matches the expected role
+    // If user is authenticated and session is valid
     if (user && profile && profile.status === "active") {
-      console.log('Login: User and profile found, checking role...');
-      
-      // Check if the role parameter matches the user's actual role
+      // If role parameter is provided and doesn't match current user's role, logout and allow login for new role
       if (role && profile.role !== role) {
-        // Role mismatch - user should not be auto-logged in
-        console.log('Role mismatch detected:', { expected: role, actual: profile.role });
-        setLoading(false);
+        console.log('Login: User is logged in with different role, logging out to allow login for new role:', { currentRole: profile.role, requestedRole: role });
+        signOut();
         return;
       }
       
-      // For attendant role, require explicit login (no auto-redirect)
-      if (role === 'attendant') {
-        console.log('Attendant role requires explicit login, not auto-redirecting');
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Login: All checks passed, navigating to dashboard...');
+      // If user is already logged in with the same role (or no role specified), redirect to dashboard
+      console.log('Login: User is authenticated with valid session, redirecting to dashboard...');
       setLoading(false); // Reset loading state when user is successfully authenticated
-      // All users go to /dashboard, which will show the appropriate dashboard based on role
+      // All authenticated users go to /dashboard, which will show the appropriate dashboard based on role
       // Use replace to prevent back button issues on mobile
       navigate("/dashboard", { replace: true });
     } else {
@@ -55,7 +51,7 @@ export default function Login() {
         profileStatus: profile?.status 
       });
     }
-  }, [user, profile, navigate, role, loading]);
+  }, [user, profile, navigate, authLoading, role, signOut]);
 
   const handleSignOut = async () => {
     await signOut();
