@@ -296,12 +296,32 @@ export class AttendantsService {
 
   async createAttendant(data: CreateAttendantDto, createdBy?: string, userRole?: UserRole): Promise<Attendant> {
     // Check if email already exists
-    const existingProfile = await this.profileRepository.findOne({
+    const existingProfileByEmail = await this.profileRepository.findOne({
       where: { email: data.email, is_deleted: false },
     });
 
-    if (existingProfile) {
+    if (existingProfileByEmail) {
       throw new ConflictException('Email already exists');
+    }
+
+    // Check if user_name already exists
+    const existingProfileByUserName = await this.profileRepository.findOne({
+      where: { user_name: data.user_name, is_deleted: false },
+    });
+
+    if (existingProfileByUserName) {
+      throw new ConflictException('User name already exists');
+    }
+
+    // Check if phone_number already exists (if provided)
+    if (data.phone_number) {
+      const existingProfileByPhone = await this.profileRepository.findOne({
+        where: { phone_number: data.phone_number, is_deleted: false },
+      });
+
+      if (existingProfileByPhone) {
+        throw new ConflictException('Phone number already exists');
+      }
     }
 
     let contractor: Contractor | null = null;
@@ -424,6 +444,39 @@ export class AttendantsService {
 
   async updateAttendant(id: string, data: UpdateAttendantDto, updatedBy?: string): Promise<Attendant> {
     const attendant = await this.getAttendantById(id);
+
+    // Check for duplicate email (if being updated)
+    if (data.email) {
+      const existingProfileByEmail = await this.profileRepository.findOne({
+        where: { email: data.email, is_deleted: false },
+      });
+
+      if (existingProfileByEmail && existingProfileByEmail.id !== attendant.user_id) {
+        throw new ConflictException('Email already exists');
+      }
+    }
+
+    // Check for duplicate user_name (if being updated)
+    if (data.user_name) {
+      const existingProfileByUserName = await this.profileRepository.findOne({
+        where: { user_name: data.user_name, is_deleted: false },
+      });
+
+      if (existingProfileByUserName && existingProfileByUserName.id !== attendant.user_id) {
+        throw new ConflictException('User name already exists');
+      }
+    }
+
+    // Check for duplicate phone_number (if being updated)
+    if (data.phone_number) {
+      const existingProfileByPhone = await this.profileRepository.findOne({
+        where: { phone_number: data.phone_number, is_deleted: false },
+      });
+
+      if (existingProfileByPhone && existingProfileByPhone.id !== attendant.user_id) {
+        throw new ConflictException('Phone number already exists');
+      }
+    }
 
     // If location_id is being updated, validate the new location and check limits
     if (data.location_id !== undefined && data.location_id !== attendant.location_id) {

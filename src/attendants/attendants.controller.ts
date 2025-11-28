@@ -79,7 +79,7 @@ export class AttendantsController {
   @ApiOperation({ summary: 'Create attendant', description: 'Create a new attendant with profile' })
   @ApiBody({ type: CreateAttendantDto })
   @ApiResponse({ status: 201, description: 'Attendant created successfully' })
-  @ApiResponse({ status: 409, description: 'Email already exists' })
+  @ApiResponse({ status: 409, description: 'Duplicate entry: Email, User name, or Phone number already exists' })
   @ApiResponse({ status: 403, description: 'Forbidden - Cannot create for other contractors' })
   @ApiResponse({ status: 400, description: 'Bad Request - Limit exceeded' })
   async createAttendant(@Body() data: CreateAttendantDto, @Request() req) {
@@ -94,6 +94,7 @@ export class AttendantsController {
   @ApiBody({ type: UpdateAttendantDto })
   @ApiResponse({ status: 200, description: 'Attendant updated successfully' })
   @ApiResponse({ status: 404, description: 'Attendant not found' })
+  @ApiResponse({ status: 409, description: 'Duplicate entry: Email, User name, or Phone number already exists' })
   async updateAttendant(@Param('id') id: string, @Body() data: UpdateAttendantDto, @Request() req) {
     return this.attendantsService.updateAttendant(id, data, req.user?.id);
   }
