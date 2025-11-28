@@ -26,14 +26,11 @@ import { ContractorAPI } from "@/services/contractorApi";
 import { AttendantAPI } from "@/services/attendantApi";
 import { LocationAPI } from "@/services/locationApi";
 
-type ContractorMap = { [contractorId: string]: string };
-
 export default function Vehicles() {
   const { profile } = useAuth();
   const { toast } = useToast();
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [contractors, setContractors] = useState<ContractorMap>({});
   const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
   const [locations, setLocations] = useState<any[]>([]);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
@@ -438,12 +435,6 @@ export default function Vehicles() {
         if (isSuperAdmin) {
           const all = await VehicleAPI.getAllVehicles();
           setVehicles(all);
-          const contractorsData = await ContractorAPI.getAllContractors();
-          const map: ContractorMap = {};
-          contractorsData.forEach((c) => {
-            map[c.id] = c.company_name || '';
-          });
-          setContractors(map);
         } else if (isAttendant) {
           // For attendants, load their vehicles
           const all = await VehicleAPI.getAttendantVehicles();
@@ -569,8 +560,13 @@ export default function Vehicles() {
           setVehicles([]);
           setLocations([]);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading vehicles:', error);
+        toast({
+          variant: "destructive",
+          title: "Error Loading Vehicles",
+          description: error?.message || "Failed to load vehicles. Please try again later.",
+        });
         setVehicles([]);
         setLocations([]);
       } finally {
@@ -597,25 +593,62 @@ export default function Vehicles() {
     const totalVehicles = vehicles.length;
     const currentlyParked = vehicles.filter(v => v.check_out_time === null).length;
     const checkedOut = vehicles.filter(v => v.check_out_time !== null);
-    const totalRevenue = vehicles.reduce((sum, v) => sum + (v.payment_amount || 0), 0);
+    
+    // Calculate total revenue - ensure payment_amount is a valid number
+    const totalRevenue = vehicles.reduce((sum, v) => {
+      if (!v.payment_amount) return sum;
+      // Convert to number if it's a string, handle null/undefined
+      let amount: number;
+      if (typeof v.payment_amount === 'number') {
+        amount = v.payment_amount;
+      } else if (typeof v.payment_amount === 'string') {
+        const parsed = parseFloat(v.payment_amount);
+        amount = isNaN(parsed) ? 0 : parsed;
+      } else {
+        amount = 0;
+      }
+      // Only add valid, positive amounts
+      return sum + (amount > 0 && isFinite(amount) ? amount : 0);
+    }, 0);
     
     // Calculate average duration for checked out vehicles
     let averageDuration = 0;
     if (checkedOut.length > 0) {
+      let validDurations = 0;
       const totalDuration = checkedOut.reduce((sum, v) => {
         if (v.check_in_time && v.check_out_time) {
-          const duration = new Date(v.check_out_time).getTime() - new Date(v.check_in_time).getTime();
-          return sum + duration;
+          try {
+            const checkIn = new Date(v.check_in_time);
+            const checkOut = new Date(v.check_out_time);
+            
+            // Validate dates
+            if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+              return sum;
+            }
+            
+            const duration = checkOut.getTime() - checkIn.getTime();
+            
+            // Only count positive durations (check_out should be after check_in)
+            if (duration > 0) {
+              validDurations++;
+              return sum + duration;
+            }
+          } catch (error) {
+            console.error('Error calculating duration for vehicle:', v.id, error);
+          }
         }
         return sum;
       }, 0);
-      averageDuration = totalDuration / checkedOut.length / (1000 * 60 * 60); // Convert to hours
+      
+      if (validDurations > 0) {
+        averageDuration = totalDuration / validDurations / (1000 * 60 * 60); // Convert to hours
+      }
     }
 
     return {
       totalVehicles,
       currentlyParked,
-      averageDuration: Math.round(averageDuration * 10) / 10,
+      averageDuration: averageDuration > 0 ? Math.round(averageDuration * 10) / 10 : 0,
       totalRevenue: Math.round(totalRevenue * 100) / 100
     };
   }, [vehicles]);
