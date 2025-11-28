@@ -70,6 +70,7 @@ export interface CreateAttendantData {
   phone_number?: string;
   location_id?: string;
   contractor_id: string;
+  status?: string;
 }
 
 export interface PaginatedResponse<T> {

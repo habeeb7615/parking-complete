@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, memo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, MapPin, Users, Car, Banknote, TrendingUp, Plus, Edit, Trash2, Eye, Settings, BarChart3 } from "lucide-react";
+import { Building2, MapPin, Users, Car, Banknote, TrendingUp, Plus, Edit, Trash2, Eye, EyeOff, Settings, BarChart3 } from "lucide-react";
 import { SuperAdminAPI, Contractor, Location, Attendant, CreateContractorData, CreateLocationData, CreateAttendantData } from "@/services/superAdminApi";
 import { MetricCard } from "./MetricCard";
 import { QuickActions } from "./QuickActions";
@@ -63,12 +63,27 @@ const SuperAdminDashboard = memo(function SuperAdminDashboard() {
   
   // Form states
   const [contractorForm, setContractorForm] = useState<CreateContractorData>({
-    company_name: '',
-    contact_number: '',
+    user_name: '',
     email: '',
     password: '',
+    phone_number: '',
+    company_name: '',
+    contact_number: '',
     allowed_locations: 5,
-    allowed_attendants_per_location: 3
+    allowed_attendants_per_location: 3,
+    status: 'active',
+    rates_2wheeler: {
+      upTo2Hours: 20,
+      upTo6Hours: 50,
+      upTo12Hours: 80,
+      upTo24Hours: 100
+    },
+    rates_4wheeler: {
+      upTo2Hours: 40,
+      upTo6Hours: 100,
+      upTo12Hours: 160,
+      upTo24Hours: 200
+    }
   });
   
   const [locationForm, setLocationForm] = useState<CreateLocationData>({
@@ -88,6 +103,9 @@ const SuperAdminDashboard = memo(function SuperAdminDashboard() {
     phone_number: '',
     location_id: ''
   });
+  
+  const [showContractorPassword, setShowContractorPassword] = useState(false);
+  const [showAttendantPassword, setShowAttendantPassword] = useState(false);
   
   const { toast } = useToast();
 
@@ -147,7 +165,7 @@ const SuperAdminDashboard = memo(function SuperAdminDashboard() {
     
     try {
       // Validate form data
-      if (!contractorForm.company_name || !contractorForm.email || !contractorForm.password) {
+      if (!contractorForm.company_name || !contractorForm.email || !contractorForm.password || !contractorForm.user_name || !contractorForm.phone_number) {
         toast({
           variant: "destructive",
           title: "Validation Error",
@@ -164,12 +182,27 @@ const SuperAdminDashboard = memo(function SuperAdminDashboard() {
       });
       
       setContractorForm({
-        company_name: '',
-        contact_number: '',
+        user_name: '',
         email: '',
         password: '',
+        phone_number: '',
+        company_name: '',
+        contact_number: '',
         allowed_locations: 5,
-        allowed_attendants_per_location: 3
+        allowed_attendants_per_location: 3,
+        status: 'active',
+        rates_2wheeler: {
+          upTo2Hours: 20,
+          upTo6Hours: 50,
+          upTo12Hours: 80,
+          upTo24Hours: 100
+        },
+        rates_4wheeler: {
+          upTo2Hours: 40,
+          upTo6Hours: 100,
+          upTo12Hours: 160,
+          upTo24Hours: 200
+        }
       });
       setShowCreateContractor(false);
       fetchDashboardData();
@@ -521,20 +554,20 @@ const SuperAdminDashboard = memo(function SuperAdminDashboard() {
                   <form onSubmit={handleCreateContractor} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
+                        <Label htmlFor="user_name">User Name</Label>
+                        <Input
+                          id="user_name"
+                          value={contractorForm.user_name}
+                          onChange={(e) => setContractorForm({...contractorForm, user_name: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
                         <Label htmlFor="company_name">Company Name</Label>
                         <Input
                           id="company_name"
                           value={contractorForm.company_name}
                           onChange={(e) => setContractorForm({...contractorForm, company_name: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="contact_number">Contact Number</Label>
-                        <Input
-                          id="contact_number"
-                          value={contractorForm.contact_number}
-                          onChange={(e) => setContractorForm({...contractorForm, contact_number: e.target.value})}
                           required
                         />
                       </div>
@@ -551,14 +584,199 @@ const SuperAdminDashboard = memo(function SuperAdminDashboard() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="phone_number">Phone Number</Label>
                         <Input
-                          id="password"
-                          type="password"
-                          value={contractorForm.password}
-                          onChange={(e) => setContractorForm({...contractorForm, password: e.target.value})}
+                          id="phone_number"
+                          value={contractorForm.phone_number}
+                          onChange={(e) => setContractorForm({...contractorForm, phone_number: e.target.value})}
                           required
                         />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="contact_number">Contact Number</Label>
+                        <Input
+                          id="contact_number"
+                          value={contractorForm.contact_number}
+                          onChange={(e) => setContractorForm({...contractorForm, contact_number: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showContractorPassword ? "text" : "password"}
+                            value={contractorForm.password}
+                            onChange={(e) => setContractorForm({...contractorForm, password: e.target.value})}
+                            required
+                            className="pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6"
+                            onClick={() => setShowContractorPassword(!showContractorPassword)}
+                          >
+                            {showContractorPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="allowed_locations">Allowed Locations</Label>
+                        <Input
+                          id="allowed_locations"
+                          type="number"
+                          value={contractorForm.allowed_locations}
+                          onChange={(e) => setContractorForm({...contractorForm, allowed_locations: parseInt(e.target.value) || 5})}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="allowed_attendants_per_location">Attendants per Location</Label>
+                        <Input
+                          id="allowed_attendants_per_location"
+                          type="number"
+                          value={contractorForm.allowed_attendants_per_location}
+                          onChange={(e) => setContractorForm({...contractorForm, allowed_attendants_per_location: parseInt(e.target.value) || 3})}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select 
+                        value={contractorForm.status} 
+                        onValueChange={(value: 'active' | 'inactive') => setContractorForm({...contractorForm, status: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-base font-semibold">2-Wheeler Rates (₹)</Label>
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <Label htmlFor="rate_2w_2h" className="text-sm">Up to 2 Hours</Label>
+                            <Input
+                              id="rate_2w_2h"
+                              type="number"
+                              value={contractorForm.rates_2wheeler.upTo2Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_2wheeler: {...contractorForm.rates_2wheeler, upTo2Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="rate_2w_6h" className="text-sm">Up to 6 Hours</Label>
+                            <Input
+                              id="rate_2w_6h"
+                              type="number"
+                              value={contractorForm.rates_2wheeler.upTo6Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_2wheeler: {...contractorForm.rates_2wheeler, upTo6Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="rate_2w_12h" className="text-sm">Up to 12 Hours</Label>
+                            <Input
+                              id="rate_2w_12h"
+                              type="number"
+                              value={contractorForm.rates_2wheeler.upTo12Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_2wheeler: {...contractorForm.rates_2wheeler, upTo12Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="rate_2w_24h" className="text-sm">Up to 24 Hours</Label>
+                            <Input
+                              id="rate_2w_24h"
+                              type="number"
+                              value={contractorForm.rates_2wheeler.upTo24Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_2wheeler: {...contractorForm.rates_2wheeler, upTo24Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-base font-semibold">4-Wheeler Rates (₹)</Label>
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <Label htmlFor="rate_4w_2h" className="text-sm">Up to 2 Hours</Label>
+                            <Input
+                              id="rate_4w_2h"
+                              type="number"
+                              value={contractorForm.rates_4wheeler.upTo2Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_4wheeler: {...contractorForm.rates_4wheeler, upTo2Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="rate_4w_6h" className="text-sm">Up to 6 Hours</Label>
+                            <Input
+                              id="rate_4w_6h"
+                              type="number"
+                              value={contractorForm.rates_4wheeler.upTo6Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_4wheeler: {...contractorForm.rates_4wheeler, upTo6Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="rate_4w_12h" className="text-sm">Up to 12 Hours</Label>
+                            <Input
+                              id="rate_4w_12h"
+                              type="number"
+                              value={contractorForm.rates_4wheeler.upTo12Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_4wheeler: {...contractorForm.rates_4wheeler, upTo12Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="rate_4w_24h" className="text-sm">Up to 24 Hours</Label>
+                            <Input
+                              id="rate_4w_24h"
+                              type="number"
+                              value={contractorForm.rates_4wheeler.upTo24Hours}
+                              onChange={(e) => setContractorForm({
+                                ...contractorForm,
+                                rates_4wheeler: {...contractorForm.rates_4wheeler, upTo24Hours: parseFloat(e.target.value) || 0}
+                              })}
+                              required
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="flex justify-end space-x-2">
@@ -808,13 +1026,25 @@ const SuperAdminDashboard = memo(function SuperAdminDashboard() {
                       </div>
                       <div>
                         <Label htmlFor="password">Password</Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          value={attendantForm.password}
-                          onChange={(e) => setAttendantForm({...attendantForm, password: e.target.value})}
-                          required
-                        />
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showAttendantPassword ? "text" : "password"}
+                            value={attendantForm.password}
+                            onChange={(e) => setAttendantForm({...attendantForm, password: e.target.value})}
+                            required
+                            className="pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6"
+                            onClick={() => setShowAttendantPassword(!showAttendantPassword)}
+                          >
+                            {showAttendantPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                     <div>

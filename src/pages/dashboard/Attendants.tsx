@@ -8,11 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
-import { Users, Plus, MapPin, Clock, CheckCircle, Search, ArrowUpDown, Edit, Trash2, X } from "lucide-react";
+import { Users, Plus, MapPin, Clock, CheckCircle, Search, ArrowUpDown, Edit, Trash2, X, Eye, EyeOff } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { useToast } from "@/hooks/use-toast";
-import { AttendantAPI, type Attendant, type CreateAttendantData, type PaginatedResponse, type PaginationParams } from "@/services/attendantApi";
-import { SuperAdminAPI } from "@/services/superAdminApi";
+import { AttendantAPI, type Attendant, type PaginatedResponse, type PaginationParams } from "@/services/attendantApi";
+import { SuperAdminAPI, type CreateAttendantData } from "@/services/superAdminApi";
 import { ContractorAPI } from "@/services/contractorApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { LocationAPI } from "@/services/locationApi";
@@ -31,6 +31,7 @@ const Attendants = memo(function Attendants() {
   const [locations, setLocations] = useState<any[]>([]);
   const [contractorData, setContractorData] = useState<any>(null); // For contractor limit checking
   const [formLoading, setFormLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState<Partial<CreateAttendantData>>({
     user_name: "",
     email: "",
@@ -263,7 +264,7 @@ const Attendants = memo(function Attendants() {
       location_id: attendant.location_id || "none",
       contractor_id: attendant.parking_locations?.contractors?.company_name ? 
         contractors.find(c => c.company_name === attendant.parking_locations?.contractors?.company_name)?.id || "" : "",
-      status: attendant.status || "active"
+      status: (attendant.status === 'active' || attendant.status === 'inactive') ? attendant.status : 'active'
     });
     setShowForm(true);
   };
@@ -728,13 +729,25 @@ const Attendants = memo(function Attendants() {
             {!editing && (
               <div className="space-y-2">
                 <Label htmlFor="password">Password *</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={form.password || ""} 
-                  onChange={e => setForm({ ...form, password: e.target.value })} 
-                  placeholder="Enter password"
-                />
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={form.password || ""} 
+                    onChange={e => setForm({ ...form, password: e.target.value })} 
+                    placeholder="Enter password"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             )}
             {isSuperAdmin && (
