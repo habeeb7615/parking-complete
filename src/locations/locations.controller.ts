@@ -68,6 +68,7 @@ export class LocationsController {
   @ApiResponse({ status: 201, description: 'Location created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden - Cannot create for other contractors' })
   @ApiResponse({ status: 400, description: 'Bad Request - Limit exceeded' })
+  @ApiResponse({ status: 409, description: 'Conflict - A location with the same name and address already exists' })
   async createLocation(@Body() data: CreateLocationDto, @Request() req) {
     return this.locationsService.createLocation(data, req.user?.id, req.user?.role);
   }
@@ -80,6 +81,7 @@ export class LocationsController {
   @ApiBody({ type: UpdateLocationDto })
   @ApiResponse({ status: 200, description: 'Location updated successfully' })
   @ApiResponse({ status: 404, description: 'Location not found' })
+  @ApiResponse({ status: 409, description: 'Conflict - A location with the same name and address already exists' })
   async updateLocation(@Param('id') id: string, @Body() data: UpdateLocationDto, @Request() req) {
     return this.locationsService.updateLocation(id, data, req.user?.id);
   }

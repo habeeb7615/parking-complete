@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Location } from '../entities/location.entity';
@@ -383,6 +383,19 @@ export class LocationsService {
       );
     }
 
+    // Check for duplicate location: same name AND same address combination
+    const existingLocation = await this.locationRepository.findOne({
+      where: {
+        locations_name: data.locations_name,
+        address: data.address,
+        is_deleted: false,
+      },
+    });
+
+    if (existingLocation) {
+      throw new ConflictException('A location with the same name and address already exists');
+    }
+
     const locationId = randomUUID();
     const location = this.locationRepository.create({
       id: locationId,
@@ -407,6 +420,24 @@ export class LocationsService {
 
   async updateLocation(id: string, data: UpdateLocationDto, updatedBy?: string): Promise<Location> {
     const location = await this.getLocationById(id);
+
+    // Check for duplicate location: same name AND same address combination (if either is being updated)
+    if (data.locations_name !== undefined || data.address !== undefined) {
+      const nameToCheck = data.locations_name !== undefined ? data.locations_name : location.locations_name;
+      const addressToCheck = data.address !== undefined ? data.address : location.address;
+
+      const existingLocation = await this.locationRepository.findOne({
+        where: {
+          locations_name: nameToCheck,
+          address: addressToCheck,
+          is_deleted: false,
+        },
+      });
+
+      if (existingLocation && existingLocation.id !== id) {
+        throw new ConflictException('A location with the same name and address already exists');
+      }
+    }
 
     if (data.locations_name !== undefined) location.locations_name = data.locations_name;
     if (data.address !== undefined) location.address = data.address;
