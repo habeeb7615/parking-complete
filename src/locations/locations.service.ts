@@ -383,17 +383,18 @@ export class LocationsService {
       );
     }
 
-    // Check for duplicate location: same name AND same address combination
+    // Check for duplicate location: same name AND same address AND same contractor_id combination
     const existingLocation = await this.locationRepository.findOne({
       where: {
         locations_name: data.locations_name,
         address: data.address,
+        contractor_id: data.contractor_id,
         is_deleted: false,
       },
     });
 
     if (existingLocation) {
-      throw new ConflictException('A location with the same name and address already exists');
+      throw new ConflictException('A location with the same name and address already exists for this contractor');
     }
 
     const locationId = randomUUID();
@@ -421,21 +422,23 @@ export class LocationsService {
   async updateLocation(id: string, data: UpdateLocationDto, updatedBy?: string): Promise<Location> {
     const location = await this.getLocationById(id);
 
-    // Check for duplicate location: same name AND same address combination (if either is being updated)
-    if (data.locations_name !== undefined || data.address !== undefined) {
+    // Check for duplicate location: same name AND same address AND same contractor_id combination (if any is being updated)
+    if (data.locations_name !== undefined || data.address !== undefined || data.contractor_id !== undefined) {
       const nameToCheck = data.locations_name !== undefined ? data.locations_name : location.locations_name;
       const addressToCheck = data.address !== undefined ? data.address : location.address;
+      const contractorIdToCheck = data.contractor_id !== undefined ? data.contractor_id : location.contractor_id;
 
       const existingLocation = await this.locationRepository.findOne({
         where: {
           locations_name: nameToCheck,
           address: addressToCheck,
+          contractor_id: contractorIdToCheck,
           is_deleted: false,
         },
       });
 
       if (existingLocation && existingLocation.id !== id) {
-        throw new ConflictException('A location with the same name and address already exists');
+        throw new ConflictException('A location with the same name and address already exists for this contractor');
       }
     }
 

@@ -9,9 +9,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Enable CORS
-  const allowedOrigins = process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-    : ['http://localhost:8080', 'http://localhost:8081'];
+  const corsOrigin = process.env.CORS_ORIGIN || '';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  // If CORS_ORIGIN is '*' or empty, allow all origins (useful for production)
+  const allowAllOrigins = corsOrigin === '*' || (!corsOrigin && !isDevelopment);
+  
+  const allowedOrigins = corsOrigin && corsOrigin !== '*'
+    ? corsOrigin.split(',').map(origin => origin.trim())
+    : [];
   
   app.enableCors({
     origin: (origin, callback) => {
@@ -20,15 +26,27 @@ async function bootstrap() {
         return callback(null, true);
       }
       
-      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+      // Allow all origins if configured
+      if (allowAllOrigins) {
+        return callback(null, true);
       }
+      
+      // Allow in development mode
+      if (isDevelopment) {
+        return callback(null, true);
+      }
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.length > 0 && allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+      
+      callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Global validation pipe
