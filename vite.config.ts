@@ -29,13 +29,17 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    minify: mode === 'production' ? 'esbuild' : false, // Enable minification for production builds
-    // terserOptions: {
-    //   compress: {
-    //     drop_console: false, // Keep console logs for debugging
-    //     drop_debugger: true,
-    //   },
-    // },
+    minify: mode === 'production' ? 'terser' : false, // Use terser for better compatibility
+    terserOptions: mode === 'production' ? {
+      compress: {
+        drop_console: true, // Remove console logs in production
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
+      },
+      format: {
+        comments: false, // Remove comments
+      },
+    } : undefined,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -49,12 +53,23 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    // Enable source maps for debugging
-    sourcemap: false,
+    // Enable source maps for debugging (disabled for production)
+    sourcemap: mode === 'development',
     // Optimize for static serving
     target: 'es2020',
     cssCodeSplit: true,
     reportCompressedSize: false,
+    // Fix preload crossorigin issues
+    modulePreload: {
+      polyfill: false, // Disable polyfill to avoid crossorigin issues
+      resolveDependencies: (filename, deps) => {
+        // Only preload critical dependencies to reduce warnings
+        return deps.filter(dep => {
+          // Preload only vendor, router, and main entry chunks
+          return dep.includes('vendor') || dep.includes('router') || dep.includes('index');
+        });
+      },
+    },
   },
   // Ensure proper handling of client-side routing
   preview: {

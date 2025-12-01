@@ -18,24 +18,34 @@ console.log('🚀 Optimizing build for instant static loading...');
 const indexPath = path.join(__dirname, 'dist', 'index.html');
 let htmlContent = fs.readFileSync(indexPath, 'utf8');
 
-// Extract actual asset names from the HTML
-const assetMatches = htmlContent.match(/href="\/assets\/([^"]+)"/g) || [];
-const scriptMatches = htmlContent.match(/src="\/assets\/([^"]+\.js)"/g) || [];
+// Check if Vite has already generated preload links
+const existingPreloads = htmlContent.match(/<link[^>]*rel=["']modulepreload["'][^>]*>/g) || [];
+const existingPreloadsSet = new Set(existingPreloads.map(p => {
+  const match = p.match(/href=["']([^"']+)["']/);
+  return match ? match[1] : '';
+}));
 
-// Create preload hints dynamically
-let preloadHints = '\n    <!-- Preload critical resources for instant loading -->\n';
-assetMatches.forEach(match => {
+// Extract actual asset names from the HTML (only CSS files, Vite handles JS preloads)
+const cssMatches = htmlContent.match(/href="\/assets\/([^"]+\.css)"/g) || [];
+
+// Create preload hints only for CSS (Vite handles JS modulepreload)
+// And only if not already preloaded by Vite
+let preloadHints = '';
+cssMatches.forEach(match => {
   const href = match.match(/href="([^"]+)"/)[1];
-  const ext = path.extname(href);
-  const as = ext === '.css' ? 'style' : 'script';
-  preloadHints += `    <link rel="preload" href="${href}" as="${as}" />\n`;
+  // Only add if Vite hasn't already preloaded it
+  if (!existingPreloadsSet.has(href)) {
+    preloadHints += `    <link rel="preload" href="${href}" as="style" crossorigin="anonymous" />\n`;
+  }
 });
 
-// Insert preload hints after the critical CSS
-htmlContent = htmlContent.replace(
-  '</style>',
-  '</style>' + preloadHints
-);
+// Insert preload hints after the critical CSS only if we have any
+if (preloadHints) {
+  htmlContent = htmlContent.replace(
+    '</style>',
+    '</style>\n' + preloadHints
+  );
+}
 
 // Add performance optimizations
 const performanceScript = `
