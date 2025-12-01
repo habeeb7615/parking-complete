@@ -17,12 +17,6 @@ export default defineConfig(({ mode }) => ({
         secure: false,
         rewrite: (path) => path, // Keep the /apitest path as-is
       },
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path, // Keep the /api path as-is
-      },
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
@@ -35,7 +29,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    minify: false, // Disable minification to prevent syntax errors
+    minify: mode === 'production' ? 'esbuild' : false, // Enable minification for production builds
     // terserOptions: {
     //   compress: {
     //     drop_console: false, // Keep console logs for debugging
