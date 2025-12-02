@@ -29,49 +29,27 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
           return data;
         }
 
-        // If data is a message string, wrap it
+        // If data is a message string, return simple response
         if (typeof data === 'string') {
           return {
-            success: true,
             statusCode,
             message: data,
-            data: null,
-            timestamp: new Date().toISOString(),
           };
         }
 
-        // Default response format
-        return {
-          success: true,
-          statusCode,
-          message: this.getDefaultMessage(request.method, statusCode),
-          data: data || null,
-          timestamp: new Date().toISOString(),
-        };
+        // If data is an object with only message field, return simple response
+        if (data && typeof data === 'object' && 'message' in data && Object.keys(data).length === 1) {
+          return {
+            statusCode,
+            message: data.message,
+          };
+        }
+
+        // Return data directly without extra wrapper fields
+        return data || null;
       }),
     );
   }
 
-  private getDefaultMessage(method: string, statusCode: number): string {
-    if (statusCode === 201) {
-      return 'Resource created successfully';
-    }
-    if (statusCode === 200) {
-      switch (method) {
-        case 'GET':
-          return 'Data retrieved successfully';
-        case 'POST':
-          return 'Operation completed successfully';
-        case 'PUT':
-        case 'PATCH':
-          return 'Resource updated successfully';
-        case 'DELETE':
-          return 'Resource deleted successfully';
-        default:
-          return 'Operation completed successfully';
-      }
-    }
-    return 'Success';
-  }
 }
 

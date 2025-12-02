@@ -53,13 +53,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       formattedMessage = message;
     }
 
-    const errorResponse: ErrorResponse = {
-      success: false,
+    // Return simple error response with only statusCode and message
+    const errorResponse = {
       statusCode: status,
       message: formattedMessage,
-      error: error || HttpStatus[status],
-      timestamp: new Date().toISOString(),
-      path: request.url,
     };
 
     // Log error for debugging (in production, use proper logger)
