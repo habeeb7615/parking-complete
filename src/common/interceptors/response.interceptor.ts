@@ -29,24 +29,54 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
           return data;
         }
 
-        // If data is a message string, return simple response
+        // If data is a message string, return simple response with statusCode
         if (typeof data === 'string') {
           return {
-            statusCode,
+            statusCode: statusCode || 200,
             message: data,
           };
         }
 
-        // If data is an object with only message field, return simple response
+        // If data is an object with only message field, return simple response with statusCode
         if (data && typeof data === 'object' && 'message' in data && Object.keys(data).length === 1) {
           return {
-            statusCode,
+            statusCode: statusCode || 200,
             message: data.message,
           };
         }
 
-        // Return data directly without extra wrapper fields
-        return data || null;
+        // If data is an array, wrap it with statusCode
+        if (Array.isArray(data)) {
+          return {
+            statusCode: statusCode || 200,
+            data: data,
+          };
+        }
+
+        // If data is an object, check if it already has statusCode
+        if (data && typeof data === 'object') {
+          // If data already has statusCode, preserve it
+          if ('statusCode' in data) {
+            return data;
+          }
+          // Add statusCode to the response object
+          return {
+            ...data,
+            statusCode: statusCode || 200,
+          };
+        }
+
+        // For null or other types, return with statusCode
+        if (data === null || data === undefined) {
+          return {
+            statusCode: statusCode || 200,
+          };
+        }
+
+        return {
+          statusCode: statusCode || 200,
+          data: data,
+        };
       }),
     );
   }
