@@ -103,6 +103,11 @@ export class SubscriptionsService {
       status: profile.subscription_status || 'expired',
       days_remaining: Math.max(0, daysRemaining),
       is_valid: isValid,
+      price: profile.subscription_plans?.price || 0,
+      days: profile.subscription_plans?.days || 0,
+      max_locations: profile.subscription_plans?.max_locations || 0,
+      max_attendants: profile.subscription_plans?.max_attendants || 0,
+      features: profile.subscription_plans?.features || {},
     };
   }
 

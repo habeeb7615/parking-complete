@@ -24,7 +24,8 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       // synchronize: this.configService.get<string>('NODE_ENV') === 'development',
       synchronize: this.configService.get<string>('NODE_ENV') === 'production',
       // migrations: ['dist/migrations/*.js'], // Uncomment for production migrations
-      logging: this.configService.get<string>('NODE_ENV') === 'development',
+      // logging: this.configService.get<string>('NODE_ENV') === 'development',
+      logging: false, // Disable SQL query logging
       charset: 'utf8mb4',
       timezone: '+00:00',
       // Disable foreign key creation to avoid constraint errors

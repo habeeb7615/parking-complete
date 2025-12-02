@@ -7,6 +7,7 @@ import { Location } from '../entities/location.entity';
 import { Attendant } from '../entities/attendant.entity';
 import { Vehicle } from '../entities/vehicle.entity';
 import { Payment } from '../entities/payment.entity';
+import { Profile } from '../entities/profile.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Payment } from '../entities/payment.entity';
       Attendant,
       Vehicle,
       Payment,
+      Profile,
     ]),
   ],
   controllers: [ContractorDashboardController],
