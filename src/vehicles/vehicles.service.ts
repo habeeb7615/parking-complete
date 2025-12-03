@@ -496,9 +496,17 @@ export class VehiclesService {
       checkoutTime = utcNow;
     }
 
+    // CRITICAL: Get original check_in_time directly from database as raw value
+    // This avoids any timezone conversion issues
+    const originalCheckInTimeRaw = await this.vehicleRepository.query(
+      `SELECT check_in_time FROM vehicles WHERE id = ?`,
+      [vehicleId]
+    );
+    const originalCheckInTimeValue = originalCheckInTimeRaw[0]?.check_in_time;
+
     // CRITICAL: Use raw SQL query to update only specific fields
-    // This ensures check_in_time is NEVER modified or touched
-    // Pass Date objects directly - TypeORM will handle timezone conversion based on database config
+    // Do NOT include check_in_time in SET clause at all - let MySQL keep it unchanged
+    // Using check_in_time = check_in_time can sometimes cause timezone issues
     await this.vehicleRepository.query(
       `UPDATE vehicles 
        SET check_out_time = ?, 
@@ -517,22 +525,30 @@ export class VehiclesService {
       ]
     );
 
-    // Verify check_in_time was not modified by querying it directly
+    // Verify check_in_time was not modified - if it was, restore using raw database value
     const verifyCheckInTime = await this.vehicleRepository.query(
       `SELECT check_in_time FROM vehicles WHERE id = ?`,
       [vehicleId]
     );
 
-    // Return updated vehicle with original check_in_time preserved
-    const updatedVehicle = await this.getVehicleById(vehicleId);
-    
-    // Ensure check_in_time matches original (in case of any timezone display issues)
-    if (verifyCheckInTime && verifyCheckInTime[0]) {
-      // Use the verified check_in_time from database
-      updatedVehicle.check_in_time = verifyCheckInTime[0].check_in_time;
+    if (verifyCheckInTime && verifyCheckInTime[0] && verifyCheckInTime[0].check_in_time) {
+      const dbCheckInTime = verifyCheckInTime[0].check_in_time;
+      // Compare timestamps directly (in milliseconds) to avoid timezone string comparison issues
+      const originalTime = originalCheckInTimeValue ? new Date(originalCheckInTimeValue).getTime() : null;
+      const dbTime = new Date(dbCheckInTime).getTime();
+      
+      // If check_in_time was modified (more than 1 second difference), restore it using raw SQL value
+      if (originalTime && Math.abs(dbTime - originalTime) > 1000) {
+        // Use the original raw value directly in SQL to avoid timezone conversion
+        await this.vehicleRepository.query(
+          `UPDATE vehicles SET check_in_time = ? WHERE id = ?`,
+          [originalCheckInTimeValue, vehicleId]
+        );
+      }
     }
-    
-    return updatedVehicle;
+
+    // Return updated vehicle - check_in_time is preserved
+    return this.getVehicleById(vehicleId);
   }
 
   async deleteVehicle(id: string, deletedBy?: string): Promise<void> {
