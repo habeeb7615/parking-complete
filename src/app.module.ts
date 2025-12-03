@@ -11,6 +11,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ContractorDashboardModule } from './contractor-dashboard/contractor-dashboard.module';
+import { AttendantDashboardModule } from './attendant-dashboard/attendant-dashboard.module';
 import { SubscriptionDashboardModule } from './subscription-dashboard/subscription-dashboard.module';
 import { DatabaseConfig } from './config/database.config';
 
@@ -33,6 +34,7 @@ import { DatabaseConfig } from './config/database.config';
     SubscriptionsModule,
     DashboardModule,
     ContractorDashboardModule,
+    AttendantDashboardModule,
     SubscriptionDashboardModule,
   ],
 })

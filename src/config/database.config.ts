@@ -34,7 +34,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       extra: {
         connectionLimit: 10,
         // Connection timeout settings (in milliseconds)
-        connectTimeout: 30000, // 30 seconds to establish connection
+        connectTimeout: 60000, // 60 seconds to establish connection
         // Keep connections alive to prevent MySQL from closing idle connections
         keepAliveInitialDelay: 0,
         enableKeepAlive: true,
@@ -48,6 +48,8 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         // Socket timeout - how long to wait for response from MySQL
         acquireTimeout: 30000, // 30 seconds to acquire connection from pool
         timeout: 30000, // 30 seconds query timeout
+        idleTimeout: 60000,      // 60 sec
+        idleTimeoutMillis: 60000,
       },
       // Retry connection on failure
       maxQueryExecutionTime: 60000,
