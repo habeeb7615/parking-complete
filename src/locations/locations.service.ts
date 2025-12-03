@@ -58,29 +58,29 @@ export class LocationsService {
       }
 
       const locationIds = locations.map((loc) => loc.id);
-      let occupiedVehicles = [];
+      const occupiedByLocation: Record<string, number> = {};
       
       if (locationIds.length > 0) {
         try {
-          occupiedVehicles = await this.vehicleRepository
+          // Use COUNT query for better performance instead of fetching all vehicles
+          const occupiedCounts = await this.vehicleRepository
             .createQueryBuilder('vehicle')
+            .select('vehicle.location_id', 'location_id')
+            .addSelect('COUNT(vehicle.id)', 'count')
             .where('vehicle.location_id IN (:...locationIds)', { locationIds })
             .andWhere('vehicle.check_out_time IS NULL')
             .andWhere('vehicle.is_deleted = false')
-            .select(['vehicle.location_id'])
-            .getMany();
+            .groupBy('vehicle.location_id')
+            .getRawMany();
+
+          occupiedCounts.forEach((row: any) => {
+            occupiedByLocation[row.location_id] = parseInt(row.count) || 0;
+          });
         } catch (vehicleError) {
           console.error('Error fetching occupied vehicles:', vehicleError);
           // Continue with empty occupied vehicles if query fails
-          occupiedVehicles = [];
         }
       }
-
-      const occupiedByLocation = occupiedVehicles.reduce((acc, vehicle) => {
-        const locationId = vehicle.location_id;
-        acc[locationId] = (acc[locationId] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
 
       return locations.map((location) => ({
         ...location,
@@ -131,25 +131,25 @@ export class LocationsService {
 
     const [locations, count] = await queryBuilder.skip(skip).take(take).getManyAndCount();
 
-    // Calculate occupied slots for each location
+    // Calculate occupied slots for each location using COUNT query
     const locationIds = locations.map((loc) => loc.id);
-    let occupiedVehicles = [];
+    const occupiedByLocation: Record<string, number> = {};
     
     if (locationIds.length > 0) {
-      occupiedVehicles = await this.vehicleRepository
+      const occupiedCounts = await this.vehicleRepository
         .createQueryBuilder('vehicle')
+        .select('vehicle.location_id', 'location_id')
+        .addSelect('COUNT(vehicle.id)', 'count')
         .where('vehicle.location_id IN (:...locationIds)', { locationIds })
         .andWhere('vehicle.check_out_time IS NULL')
         .andWhere('vehicle.is_deleted = false')
-        .select(['vehicle.location_id'])
-        .getMany();
-    }
+        .groupBy('vehicle.location_id')
+        .getRawMany();
 
-    const occupiedByLocation = occupiedVehicles.reduce((acc, vehicle) => {
-      const locationId = vehicle.location_id;
-      acc[locationId] = (acc[locationId] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+      occupiedCounts.forEach((row: any) => {
+        occupiedByLocation[row.location_id] = parseInt(row.count) || 0;
+      });
+    }
 
     const data = locations.map((location) => ({
       ...location,
@@ -266,25 +266,25 @@ export class LocationsService {
         .orderBy(orderByField, orderDirection)
         .getManyAndCount();
 
-      // Calculate occupied slots for each location
+      // Calculate occupied slots for each location using COUNT query
       const locationIds = list.map((loc) => loc.id);
-      let occupiedVehicles = [];
+      const occupiedByLocation: Record<string, number> = {};
       
       if (locationIds.length > 0) {
-        occupiedVehicles = await this.vehicleRepository
+        const occupiedCounts = await this.vehicleRepository
           .createQueryBuilder('vehicle')
+          .select('vehicle.location_id', 'location_id')
+          .addSelect('COUNT(vehicle.id)', 'count')
           .where('vehicle.location_id IN (:...locationIds)', { locationIds })
           .andWhere('vehicle.check_out_time IS NULL')
           .andWhere('vehicle.is_deleted = :isDeleted', { isDeleted: false })
-          .select(['vehicle.location_id'])
-          .getMany();
-      }
+          .groupBy('vehicle.location_id')
+          .getRawMany();
 
-      const occupiedByLocation = occupiedVehicles.reduce((acc, vehicle) => {
-        const locationId = vehicle.location_id;
-        acc[locationId] = (acc[locationId] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+        occupiedCounts.forEach((row: any) => {
+          occupiedByLocation[row.location_id] = parseInt(row.count) || 0;
+        });
+      }
 
       const data = list.map((location) => ({
         ...location,
@@ -348,25 +348,25 @@ export class LocationsService {
         return [];
       }
 
-      // Calculate occupied slots
+      // Calculate occupied slots using COUNT query
       const locationIds = locations.map((loc) => loc.id);
-      let occupiedVehicles = [];
+      const occupiedByLocation: Record<string, number> = {};
       
       if (locationIds.length > 0) {
-        occupiedVehicles = await this.vehicleRepository
+        const occupiedCounts = await this.vehicleRepository
           .createQueryBuilder('vehicle')
+          .select('vehicle.location_id', 'location_id')
+          .addSelect('COUNT(vehicle.id)', 'count')
           .where('vehicle.location_id IN (:...locationIds)', { locationIds })
           .andWhere('vehicle.check_out_time IS NULL')
           .andWhere('vehicle.is_deleted = false')
-          .select(['vehicle.location_id'])
-          .getMany();
-      }
+          .groupBy('vehicle.location_id')
+          .getRawMany();
 
-      const occupiedByLocation = occupiedVehicles.reduce((acc, vehicle) => {
-        const locationId = vehicle.location_id;
-        acc[locationId] = (acc[locationId] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+        occupiedCounts.forEach((row: any) => {
+          occupiedByLocation[row.location_id] = parseInt(row.count) || 0;
+        });
+      }
 
       return locations.map((location) => ({
         ...location,

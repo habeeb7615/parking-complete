@@ -39,8 +39,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
         error = responseObj.error || exception.name;
       }
     } else if (exception instanceof Error) {
-      message = exception.message || 'Internal server error';
-      error = exception.name;
+      // Handle database connection errors specifically
+      if (exception.message.includes('ETIMEDOUT') || exception.message.includes('ECONNREFUSED') || exception.message.includes('connect')) {
+        message = 'Database connection timeout. Please try again later.';
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        error = 'DatabaseConnectionError';
+      } else {
+        message = exception.message || 'Internal server error';
+        error = exception.name;
+      }
     }
 
     // Format message: if array has single item, convert to string; if multiple items, keep as array; if string, keep as string

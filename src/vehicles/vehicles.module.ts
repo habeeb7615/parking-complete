@@ -5,9 +5,12 @@ import { VehiclesService } from './vehicles.service';
 import { Vehicle } from '../entities/vehicle.entity';
 import { Location } from '../entities/location.entity';
 import { Contractor } from '../entities/contractor.entity';
+import { Payment } from '../entities/payment.entity';
+import { Attendant } from '../entities/attendant.entity';
+import { Profile } from '../entities/profile.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Vehicle, Location, Contractor])],
+  imports: [TypeOrmModule.forFeature([Vehicle, Location, Contractor, Payment, Attendant, Profile])],
   controllers: [VehiclesController],
   providers: [VehiclesService],
   exports: [VehiclesService],

@@ -62,9 +62,9 @@ export class VehiclesController {
   }
 
   @Get('contractor/:contractorId')
-  @ApiOperation({ summary: 'Get contractor vehicles', description: 'Retrieve all vehicles for a specific contractor' })
+  @ApiOperation({ summary: 'Get contractor vehicles', description: 'Retrieve all vehicles for a specific contractor with attendant details' })
   @ApiParam({ name: 'contractorId', description: 'Contractor ID', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Vehicles retrieved successfully' })
+  @ApiResponse({ status: 200, description: 'Vehicles retrieved successfully with attendant details' })
   async getContractorVehicles(@Param('contractorId') contractorId: string) {
     return this.vehiclesService.getContractorVehicles(contractorId);
   }

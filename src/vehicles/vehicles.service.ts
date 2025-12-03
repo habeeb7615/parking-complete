@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Vehicle } from '../entities/vehicle.entity';
 import { Contractor } from '../entities/contractor.entity';
+import { Payment } from '../entities/payment.entity';
+import { Attendant } from '../entities/attendant.entity';
+import { Profile } from '../entities/profile.entity';
 import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
 import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
@@ -18,6 +21,12 @@ export class VehiclesService {
     private vehicleRepository: Repository<Vehicle>,
     @InjectRepository(Contractor)
     private contractorRepository: Repository<Contractor>,
+    @InjectRepository(Payment)
+    private paymentRepository: Repository<Payment>,
+    @InjectRepository(Attendant)
+    private attendantRepository: Repository<Attendant>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
   ) {}
 
   /**
@@ -238,16 +247,100 @@ export class VehiclesService {
   }
 
   async getContractorVehicles(contractorId: string) {
+    // Fetch vehicles with relations in single query
     const vehicles = await this.vehicleRepository.find({
       where: { contractor_id: contractorId, is_deleted: false },
       relations: ['parking_locations', 'contractors'],
       order: { check_in_time: 'DESC' },
     });
 
-    return vehicles.map((vehicle) => ({
-      ...vehicle,
-      status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
-    }));
+    if (vehicles.length === 0) {
+      return [];
+    }
+
+    // Get vehicle IDs and unique location IDs
+    const vehicleIds = vehicles.map(v => v.id);
+    const locationIds = [...new Set(vehicles.map(v => v.location_id))];
+
+    // Parallel fetch: payments with attendants+profiles, and location attendants with profiles
+    const [payments, locationAttendants] = await Promise.all([
+      // Get payments with attendants and their profiles in single query
+      vehicleIds.length > 0
+        ? this.paymentRepository
+            .createQueryBuilder('payment')
+            .leftJoinAndSelect('payment.attendants', 'attendant')
+            .leftJoinAndSelect('attendant.profiles', 'profile')
+            .where('payment.vehicle_id IN (:...vehicleIds)', { vehicleIds })
+            .getMany()
+        : Promise.resolve([]),
+      // Get attendants for locations with profiles in single query
+      locationIds.length > 0
+        ? this.attendantRepository
+            .createQueryBuilder('attendant')
+            .leftJoinAndSelect('attendant.profiles', 'profile')
+            .where('attendant.location_id IN (:...locationIds)', { locationIds })
+            .andWhere('attendant.is_deleted = false')
+            .getMany()
+        : Promise.resolve([]),
+    ]);
+
+    // Create lookup maps (single pass)
+    const vehicleToPaymentMap = new Map();
+    const locationToAttendantsMap = new Map();
+
+    payments.forEach(payment => {
+      if (payment.vehicle_id && !vehicleToPaymentMap.has(payment.vehicle_id)) {
+        vehicleToPaymentMap.set(payment.vehicle_id, payment);
+      }
+    });
+
+    locationAttendants.forEach(attendant => {
+      if (!locationToAttendantsMap.has(attendant.location_id)) {
+        locationToAttendantsMap.set(attendant.location_id, []);
+      }
+      locationToAttendantsMap.get(attendant.location_id).push(attendant);
+    });
+
+    // Map vehicles with attendant details (single pass)
+    return vehicles.map((vehicle) => {
+      let attendant = null;
+      const payment = vehicleToPaymentMap.get(vehicle.id);
+      
+      if (payment?.attendants) {
+        // Attendant from payment (already has profile from join)
+        const att = payment.attendants;
+        attendant = {
+          id: att.id,
+          user_id: att.user_id,
+          location_id: att.location_id,
+          status: att.status,
+          name: att.profiles?.user_name || null,
+          email: att.profiles?.email || null,
+          phone_number: att.profiles?.phone_number || null,
+        };
+      } else {
+        // Get first attendant from location
+        const locAttendants = locationToAttendantsMap.get(vehicle.location_id) || [];
+        if (locAttendants.length > 0) {
+          const locAtt = locAttendants[0];
+          attendant = {
+            id: locAtt.id,
+            user_id: locAtt.user_id,
+            location_id: locAtt.location_id,
+            status: locAtt.status,
+            name: locAtt.profiles?.user_name || null,
+            email: locAtt.profiles?.email || null,
+            phone_number: locAtt.profiles?.phone_number || null,
+          };
+        }
+      }
+
+      return {
+        ...vehicle,
+        status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
+        attendant: attendant,
+      };
+    });
   }
 
   async getVehiclesByLocation(locationId: string) {
