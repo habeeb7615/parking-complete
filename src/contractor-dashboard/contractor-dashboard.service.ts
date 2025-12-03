@@ -136,24 +136,84 @@ export class ContractorDashboardService {
         .getCount();
     }
 
-    // Get vehicles
-    const vehiclesCount = await this.vehicleRepository.count({
+    // Get total vehicles
+    const totalVehicles = await this.vehicleRepository.count({
       where: { contractor_id: contractor.id, is_deleted: false },
     });
 
-    // Get revenue
-    const revenueResult = await this.paymentRepository
-      .createQueryBuilder('payment')
-      .select('SUM(payment.amount)', 'total')
-      .where('payment.contractor_id = :contractorId', { contractorId: contractor.id })
-      .andWhere('payment.payment_status = :status', { status: 'completed' })
+    // Get today's vehicles (vehicles checked in today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayVehicles = await this.vehicleRepository.count({
+      where: {
+        contractor_id: contractor.id,
+        is_deleted: false,
+      },
+    });
+
+    // Get today's vehicles count (vehicles created today)
+    const todayVehiclesCount = await this.vehicleRepository
+      .createQueryBuilder('vehicle')
+      .where('vehicle.contractor_id = :contractorId', { contractorId: contractor.id })
+      .andWhere('vehicle.is_deleted = false')
+      .andWhere('DATE(vehicle.created_on) = DATE(:today)', { today: new Date() })
+      .getCount();
+
+    // Get total revenue from vehicles table (payment_amount field)
+    // Payment status can be 'paid' or 'free' (set during checkout)
+    const totalRevenueResult = await this.vehicleRepository
+      .createQueryBuilder('vehicle')
+      .select('SUM(vehicle.payment_amount)', 'total')
+      .where('vehicle.contractor_id = :contractorId', { contractorId: contractor.id })
+      .andWhere('vehicle.is_deleted = false')
+      .andWhere('vehicle.payment_status IN (:...statuses)', { statuses: ['paid', 'free'] })
+      .andWhere('vehicle.payment_amount IS NOT NULL')
+      .andWhere('vehicle.check_out_time IS NOT NULL')
       .getRawOne();
+
+    const totalRevenue = Number(totalRevenueResult?.total || 0);
+
+    // Get today's revenue from vehicles table
+    // Use check_out_time for date comparison since payment is set during checkout
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todayRevenueResult = await this.vehicleRepository
+      .createQueryBuilder('vehicle')
+      .select('SUM(vehicle.payment_amount)', 'total')
+      .where('vehicle.contractor_id = :contractorId', { contractorId: contractor.id })
+      .andWhere('vehicle.is_deleted = false')
+      .andWhere('vehicle.payment_status IN (:...statuses)', { statuses: ['paid', 'free'] })
+      .andWhere('vehicle.payment_amount IS NOT NULL')
+      .andWhere('vehicle.check_out_time IS NOT NULL')
+      .andWhere('vehicle.check_out_time >= :today', { today })
+      .andWhere('vehicle.check_out_time < :tomorrow', { tomorrow })
+      .getRawOne();
+
+    const todayRevenue = Number(todayRevenueResult?.total || 0);
+
+    // Calculate occupancy rate
+    // Occupied slots = vehicles with check_out_time = null
+    const occupiedSlots = await this.vehicleRepository.count({
+      where: {
+        contractor_id: contractor.id,
+        check_out_time: null,
+        is_deleted: false,
+      },
+    });
+
+    // Total slots = sum of total_slots from all locations
+    const totalSlots = locations.reduce((sum, loc) => sum + (loc.total_slots || 0), 0);
+    const occupancyRate = totalSlots > 0 ? (occupiedSlots / totalSlots) * 100 : 0;
 
     return {
       totalLocations: locations.length,
       totalAttendants: attendantsCount,
-      totalVehicles: vehiclesCount,
-      totalRevenue: Number(revenueResult?.total || 0),
+      totalVehicles: totalVehicles,
+      todayVehicles: todayVehiclesCount,
+      todayRevenue: todayRevenue,
+      totalRevenue: totalRevenue,
+      occupancyRate: Math.round(occupancyRate * 10) / 10, // Round to 1 decimal place
     };
   }
 
