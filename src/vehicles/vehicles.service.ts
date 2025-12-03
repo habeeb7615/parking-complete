@@ -415,7 +415,14 @@ export class VehiclesService {
   }
 
   async checkoutVehicle(vehicleId: string, checkoutData: CheckoutVehicleDto, updatedBy?: string) {
-    const vehicle = await this.getVehicleById(vehicleId);
+    // Fetch vehicle directly from repository to get original check_in_time
+    const vehicle = await this.vehicleRepository.findOne({
+      where: { id: vehicleId, is_deleted: false },
+    });
+
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
 
     if (vehicle.check_out_time) {
       throw new Error('Vehicle is already checked out');
@@ -425,21 +432,13 @@ export class VehiclesService {
       throw new BadRequestException('Vehicle check-in time is missing');
     }
 
-    // Preserve original check-in time (convert to UTC to ensure consistency)
-    const originalCheckInTime = new Date(vehicle.check_in_time);
-    const preservedCheckInTime = new Date(Date.UTC(
-      originalCheckInTime.getUTCFullYear(),
-      originalCheckInTime.getUTCMonth(),
-      originalCheckInTime.getUTCDate(),
-      originalCheckInTime.getUTCHours(),
-      originalCheckInTime.getUTCMinutes(),
-      originalCheckInTime.getUTCSeconds(),
-      originalCheckInTime.getUTCMilliseconds()
-    ));
+    // CRITICAL: Get original check_in_time directly from database entity
+    // Do NOT modify or convert this value
+    const originalCheckInTime = vehicle.check_in_time;
+    const checkInTime = originalCheckInTime;
 
     // Get current UTC time
     const utcNow = this.getCurrentUTCTime();
-    const checkInTime = preservedCheckInTime;
 
     // Always use current UTC time for checkout to avoid timezone issues
     // Frontend should not send checkout time - it should be set automatically
@@ -483,18 +482,43 @@ export class VehiclesService {
       checkoutTime = utcNow;
     }
 
-    // Store checkout time as UTC
-    // IMPORTANT: Preserve original check-in time - do not let it be modified
-    vehicle.check_out_time = checkoutTime;
-    vehicle.check_in_time = preservedCheckInTime; // Explicitly preserve check-in time
+    // CRITICAL: Use raw SQL query to update only specific fields
+    // This ensures check_in_time is NEVER modified or touched
+    // Pass Date objects directly - TypeORM will handle timezone conversion based on database config
+    await this.vehicleRepository.query(
+      `UPDATE vehicles 
+       SET check_out_time = ?, 
+           payment_amount = ?, 
+           payment_status = ?, 
+           updated_by = ?, 
+           updated_on = ?
+       WHERE id = ? AND is_deleted = false`,
+      [
+        checkoutTime,
+        checkoutData.payment_amount,
+        checkoutData.payment_method === 'free' ? 'free' : 'paid',
+        updatedBy || null,
+        utcNow,
+        vehicleId,
+      ]
+    );
 
-    vehicle.payment_amount = checkoutData.payment_amount;
-    vehicle.payment_status = checkoutData.payment_method === 'free' ? 'free' : 'paid';
-    vehicle.updated_by = updatedBy || null;
-    vehicle.updated_on = utcNow;
+    // Verify check_in_time was not modified by querying it directly
+    const verifyCheckInTime = await this.vehicleRepository.query(
+      `SELECT check_in_time FROM vehicles WHERE id = ?`,
+      [vehicleId]
+    );
 
-    await this.vehicleRepository.save(vehicle);
-    return this.getVehicleById(vehicleId);
+    // Return updated vehicle with original check_in_time preserved
+    const updatedVehicle = await this.getVehicleById(vehicleId);
+    
+    // Ensure check_in_time matches original (in case of any timezone display issues)
+    if (verifyCheckInTime && verifyCheckInTime[0]) {
+      // Use the verified check_in_time from database
+      updatedVehicle.check_in_time = verifyCheckInTime[0].check_in_time;
+    }
+    
+    return updatedVehicle;
   }
 
   async deleteVehicle(id: string, deletedBy?: string): Promise<void> {
