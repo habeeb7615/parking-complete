@@ -21,26 +21,26 @@ export class LocationsController {
   constructor(private locationsService: LocationsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all locations', description: 'Retrieve list of all parking locations (without pagination)' })
+  @ApiOperation({ summary: 'Get all locations', description: 'Retrieve list of all parking locations (without pagination). For contractors, only their own locations are returned.' })
   @ApiResponse({ status: 200, description: 'Locations retrieved successfully' })
-  async getAllLocations() {
-    return this.locationsService.getAllLocations();
+  async getAllLocations(@Request() req) {
+    return this.locationsService.getAllLocations(req.user?.id, req.user?.role);
   }
 
   @Post('paginated')
-  @ApiOperation({ summary: 'Get locations with pagination', description: 'Retrieve locations with pagination, search, and sorting' })
+  @ApiOperation({ summary: 'Get locations with pagination', description: 'Retrieve locations with pagination, search, and sorting. For contractors, only their own locations are returned.' })
   @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Locations retrieved successfully' })
-  async getLocationsPaginated(@Body() pagination: IPagination) {
-    return this.locationsService.pagination(pagination);
+  async getLocationsPaginated(@Body() pagination: IPagination, @Request() req) {
+    return this.locationsService.pagination(pagination, req.user?.id, req.user?.role);
   }
 
   @Post('pagination')
-  @ApiOperation({ summary: 'Get locations with pagination', description: 'Retrieve locations with advanced pagination and filtering' })
+  @ApiOperation({ summary: 'Get locations with pagination', description: 'Retrieve locations with advanced pagination and filtering. For contractors, only their own locations are returned.' })
   @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Locations retrieved successfully' })
-  async pagination(@Body() pagination: IPagination) {
-    return this.locationsService.pagination(pagination);
+  async pagination(@Body() pagination: IPagination, @Request() req) {
+    return this.locationsService.pagination(pagination, req.user?.id, req.user?.role);
   }
 
   @Get(':id')

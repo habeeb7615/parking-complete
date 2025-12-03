@@ -26,12 +26,34 @@ export class AttendantsService {
     private locationRepository: Repository<Location>,
   ) {}
 
-  async getAllAttendants() {
-    return this.attendantRepository.find({
-      where: { is_deleted: false },
-      relations: ['profiles', 'parking_locations', 'parking_locations.contractors'],
-      order: { created_on: 'DESC' },
-    });
+  async getAllAttendants(userId?: string, userRole?: string) {
+    // Get contractor_id if user is a contractor
+    let locationIds: string[] = [];
+    if (userRole === UserRole.CONTRACTOR && userId) {
+      const contractor = await this.contractorRepository.findOne({
+        where: { user_id: userId, is_deleted: false },
+      });
+      if (contractor) {
+        const locations = await this.locationRepository.find({
+          where: { contractor_id: contractor.id, is_deleted: false },
+        });
+        locationIds = locations.map(loc => loc.id);
+      }
+    }
+
+    const queryBuilder = this.attendantRepository
+      .createQueryBuilder('attendant')
+      .leftJoinAndSelect('attendant.profiles', 'profile')
+      .leftJoinAndSelect('attendant.parking_locations', 'location')
+      .leftJoinAndSelect('location.contractors', 'contractor')
+      .where('attendant.is_deleted = :isDeleted', { isDeleted: false });
+
+    // Filter by contractor's locations if user is a contractor
+    if (locationIds.length > 0) {
+      queryBuilder.andWhere('attendant.location_id IN (:...locationIds)', { locationIds });
+    }
+
+    return queryBuilder.orderBy('attendant.created_on', 'DESC').getMany();
   }
 
   async getAttendantsPaginated(params: PaginationParams = {}): Promise<PaginatedResponse<Attendant>> {
@@ -83,9 +105,29 @@ export class AttendantsService {
     };
   }
 
-  async pagination(pagination: IPagination): Promise<IPaginatedResponse<Attendant>> {
+  async pagination(pagination: IPagination, userId?: string, userRole?: string): Promise<IPaginatedResponse<Attendant>> {
     const { curPage, perPage, sortBy = 'created_on', direction = 'desc', whereClause } = pagination;
+    
+    // Get contractor_id if user is a contractor
+    let locationIds: string[] = [];
+    if (userRole === UserRole.CONTRACTOR && userId) {
+      const contractor = await this.contractorRepository.findOne({
+        where: { user_id: userId, is_deleted: false },
+      });
+      if (contractor) {
+        const locations = await this.locationRepository.find({
+          where: { contractor_id: contractor.id, is_deleted: false },
+        });
+        locationIds = locations.map(loc => loc.id);
+      }
+    }
+
     let lwhereClause = 'attendant.is_deleted = false';
+    
+    // Filter by contractor's locations if user is a contractor
+    if (locationIds.length > 0) {
+      lwhereClause += ` AND attendant.location_id IN ('${locationIds.join("','")}')`;
+    }
 
     const fieldsToSearch = [
       'status',

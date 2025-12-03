@@ -35,12 +35,18 @@ export class ContractorsService {
     private profileRepository: Repository<Profile>,
   ) {}
 
-  async getAllContractors() {
-    return this.contractorRepository.find({
-      where: { is_deleted: false },
-      relations: ['profiles'],
-      order: { created_on: 'DESC' },
-    });
+  async getAllContractors(userId?: string, userRole?: string) {
+    const queryBuilder = this.contractorRepository
+      .createQueryBuilder('contractor')
+      .leftJoinAndSelect('contractor.profiles', 'profile')
+      .where('contractor.is_deleted = :isDeleted', { isDeleted: false });
+
+    // Filter by user_id if user is a contractor
+    if (userRole === UserRole.CONTRACTOR && userId) {
+      queryBuilder.andWhere('contractor.user_id = :userId', { userId });
+    }
+
+    return queryBuilder.orderBy('contractor.created_on', 'DESC').getMany();
   }
 
   async getContractorsPaginated(params: PaginationParams = {}): Promise<PaginatedResponse<Contractor>> {
@@ -90,7 +96,7 @@ export class ContractorsService {
     };
   }
 
-  async pagination(pagination: IPagination): Promise<IPaginatedResponse<Contractor>> {
+  async pagination(pagination: IPagination, userId?: string, userRole?: string): Promise<IPaginatedResponse<Contractor>> {
     try {
       const { curPage, perPage, sortBy = 'created_on', direction = 'desc', whereClause = [] } = pagination;
       
@@ -106,6 +112,11 @@ export class ContractorsService {
         .createQueryBuilder('contractor')
         .leftJoinAndSelect('contractor.profiles', 'profile')
         .where('contractor.is_deleted = :isDeleted', { isDeleted: false });
+
+      // Filter by user_id if user is a contractor
+      if (userRole === UserRole.CONTRACTOR && userId) {
+        queryBuilder.andWhere('contractor.user_id = :userId', { userId });
+      }
 
       const fieldsToSearch = [
         'company_name',

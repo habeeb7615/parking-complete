@@ -30,26 +30,26 @@ export class VehiclesController {
   constructor(private vehiclesService: VehiclesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all vehicles', description: 'Retrieve list of all vehicles (without pagination)' })
+  @ApiOperation({ summary: 'Get all vehicles', description: 'Retrieve list of all vehicles (without pagination). For contractors, only their own vehicles are returned.' })
   @ApiResponse({ status: 200, description: 'Vehicles retrieved successfully' })
-  async getAllVehicles() {
-    return this.vehiclesService.getAllVehicles();
+  async getAllVehicles(@Request() req) {
+    return this.vehiclesService.getAllVehicles(req.user?.id, req.user?.role);
   }
 
   @Post('paginated')
-  @ApiOperation({ summary: 'Get vehicles with pagination', description: 'Retrieve vehicles with pagination, search, and sorting' })
+  @ApiOperation({ summary: 'Get vehicles with pagination', description: 'Retrieve vehicles with pagination, search, and sorting. For contractors, only their own vehicles are returned.' })
   @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Vehicles retrieved successfully' })
-  async getVehiclesPaginated(@Body() pagination: IPagination) {
-    return this.vehiclesService.pagination(pagination);
+  async getVehiclesPaginated(@Body() pagination: IPagination, @Request() req) {
+    return this.vehiclesService.pagination(pagination, req.user?.id, req.user?.role);
   }
 
   @Post('pagination')
-  @ApiOperation({ summary: 'Get vehicles with pagination', description: 'Retrieve vehicles with advanced pagination and filtering' })
+  @ApiOperation({ summary: 'Get vehicles with pagination', description: 'Retrieve vehicles with advanced pagination and filtering. For contractors, only their own vehicles are returned.' })
   @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Vehicles retrieved successfully' })
-  async pagination(@Body() pagination: IPagination) {
-    return this.vehiclesService.pagination(pagination);
+  async pagination(@Body() pagination: IPagination, @Request() req) {
+    return this.vehiclesService.pagination(pagination, req.user?.id, req.user?.role);
   }
 
   @Get(':id')

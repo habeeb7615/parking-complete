@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vehicle } from '../entities/vehicle.entity';
+import { Contractor } from '../entities/contractor.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { PaginationParams, PaginatedResponse } from '../contractors/contractors.service';
 import { IPagination, IPaginatedResponse, paginateResponse } from '../common/interfaces/pagination.interface';
 import { randomUUID } from 'crypto';
@@ -14,6 +16,8 @@ export class VehiclesService {
   constructor(
     @InjectRepository(Vehicle)
     private vehicleRepository: Repository<Vehicle>,
+    @InjectRepository(Contractor)
+    private contractorRepository: Repository<Contractor>,
   ) {}
 
   /**
@@ -32,11 +36,32 @@ export class VehiclesService {
     ));
   }
 
-  async getAllVehicles() {
-    const vehicles = await this.vehicleRepository.find({
-      relations: ['parking_locations', 'contractors'],
-      order: { check_in_time: 'DESC' },
-    });
+  async getAllVehicles(userId?: string, userRole?: string) {
+    // Get contractor_id if user is a contractor
+    let contractorId: string | null = null;
+    if (userRole === UserRole.CONTRACTOR && userId) {
+      const contractor = await this.contractorRepository.findOne({
+        where: { user_id: userId, is_deleted: false },
+      });
+      if (contractor) {
+        contractorId = contractor.id;
+      }
+    }
+
+    const queryBuilder = this.vehicleRepository
+      .createQueryBuilder('vehicle')
+      .leftJoinAndSelect('vehicle.parking_locations', 'location')
+      .leftJoinAndSelect('vehicle.contractors', 'contractor')
+      .where('vehicle.is_deleted = :isDeleted', { isDeleted: false });
+
+    // Filter by contractor_id if user is a contractor
+    if (contractorId) {
+      queryBuilder.andWhere('vehicle.contractor_id = :contractorId', { contractorId });
+    }
+
+    const vehicles = await queryBuilder
+      .orderBy('vehicle.check_in_time', 'DESC')
+      .getMany();
 
     return vehicles.map((vehicle) => ({
       ...vehicle,
@@ -99,9 +124,26 @@ export class VehiclesService {
     };
   }
 
-  async pagination(pagination: IPagination): Promise<IPaginatedResponse<any>> {
+  async pagination(pagination: IPagination, userId?: string, userRole?: string): Promise<IPaginatedResponse<any>> {
     const { curPage, perPage, sortBy = 'check_in_time', direction = 'desc', whereClause } = pagination;
+    
+    // Get contractor_id if user is a contractor
+    let contractorId: string | null = null;
+    if (userRole === UserRole.CONTRACTOR && userId) {
+      const contractor = await this.contractorRepository.findOne({
+        where: { user_id: userId, is_deleted: false },
+      });
+      if (contractor) {
+        contractorId = contractor.id;
+      }
+    }
+
     let lwhereClause = 'vehicle.is_deleted = false';
+    
+    // Filter by contractor_id if user is a contractor
+    if (contractorId) {
+      lwhereClause += ` AND vehicle.contractor_id = '${contractorId}'`;
+    }
 
     const fieldsToSearch = [
       'plate_number',

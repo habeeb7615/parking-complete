@@ -25,13 +25,31 @@ export class LocationsService {
     private contractorRepository: Repository<Contractor>,
   ) {}
 
-  async getAllLocations() {
+  async getAllLocations(userId?: string, userRole?: string) {
     try {
+      // Get contractor_id if user is a contractor
+      let contractorId: string | null = null;
+      if (userRole === UserRole.CONTRACTOR && userId) {
+        const contractor = await this.contractorRepository.findOne({
+          where: { user_id: userId, is_deleted: false },
+        });
+        if (contractor) {
+          contractorId = contractor.id;
+        }
+      }
+
       // Try to load locations without relations first to avoid relation errors
-      const locations = await this.locationRepository
+      const queryBuilder = this.locationRepository
         .createQueryBuilder('location')
         .leftJoinAndSelect('location.contractors', 'contractor')
-        .where('location.is_deleted = :isDeleted', { isDeleted: false })
+        .where('location.is_deleted = :isDeleted', { isDeleted: false });
+
+      // Filter by contractor_id if user is a contractor
+      if (contractorId) {
+        queryBuilder.andWhere('location.contractor_id = :contractorId', { contractorId });
+      }
+
+      const locations = await queryBuilder
         .orderBy('location.created_on', 'DESC')
         .getMany();
 
@@ -147,7 +165,7 @@ export class LocationsService {
     };
   }
 
-  async pagination(pagination: IPagination): Promise<IPaginatedResponse<any>> {
+  async pagination(pagination: IPagination, userId?: string, userRole?: string): Promise<IPaginatedResponse<any>> {
     try {
       const { curPage, perPage, sortBy = 'created_on', direction = 'desc', whereClause = [] } = pagination;
       
@@ -159,10 +177,26 @@ export class LocationsService {
         throw new Error('Invalid perPage: must be >= 1');
       }
 
+      // Get contractor_id if user is a contractor
+      let contractorId: string | null = null;
+      if (userRole === UserRole.CONTRACTOR && userId) {
+        const contractor = await this.contractorRepository.findOne({
+          where: { user_id: userId, is_deleted: false },
+        });
+        if (contractor) {
+          contractorId = contractor.id;
+        }
+      }
+
       const queryBuilder = this.locationRepository
         .createQueryBuilder('location')
         .leftJoinAndSelect('location.contractors', 'contractor')
         .where('location.is_deleted = :isDeleted', { isDeleted: false });
+
+      // Filter by contractor_id if user is a contractor
+      if (contractorId) {
+        queryBuilder.andWhere('location.contractor_id = :contractorId', { contractorId });
+      }
 
       const fieldsToSearch = [
         'locations_name',

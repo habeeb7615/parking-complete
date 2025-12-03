@@ -20,26 +20,26 @@ export class AttendantsController {
   constructor(private attendantsService: AttendantsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all attendants', description: 'Retrieve list of all attendants (without pagination)' })
+  @ApiOperation({ summary: 'Get all attendants', description: 'Retrieve list of all attendants (without pagination). For contractors, only their own attendants are returned.' })
   @ApiResponse({ status: 200, description: 'Attendants retrieved successfully' })
-  async getAllAttendants() {
-    return this.attendantsService.getAllAttendants();
+  async getAllAttendants(@Request() req) {
+    return this.attendantsService.getAllAttendants(req.user?.id, req.user?.role);
   }
 
   @Post('paginated')
-  @ApiOperation({ summary: 'Get attendants with pagination', description: 'Retrieve attendants with pagination, search, and sorting' })
+  @ApiOperation({ summary: 'Get attendants with pagination', description: 'Retrieve attendants with pagination, search, and sorting. For contractors, only their own attendants are returned.' })
   @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Attendants retrieved successfully' })
-  async getAttendantsPaginated(@Body() pagination: IPagination) {
-    return this.attendantsService.pagination(pagination);
+  async getAttendantsPaginated(@Body() pagination: IPagination, @Request() req) {
+    return this.attendantsService.pagination(pagination, req.user?.id, req.user?.role);
   }
 
   @Post('pagination')
-  @ApiOperation({ summary: 'Get attendants with pagination', description: 'Retrieve attendants with advanced pagination and filtering' })
+  @ApiOperation({ summary: 'Get attendants with pagination', description: 'Retrieve attendants with advanced pagination and filtering. For contractors, only their own attendants are returned.' })
   @ApiBody({ schema: PaginationSchema })
   @ApiResponse({ status: 200, description: 'Attendants retrieved successfully' })
-  async pagination(@Body() pagination: IPagination) {
-    return this.attendantsService.pagination(pagination);
+  async pagination(@Body() pagination: IPagination, @Request() req) {
+    return this.attendantsService.pagination(pagination, req.user?.id, req.user?.role);
   }
 
   @Get('contractor/:contractorUserId')
