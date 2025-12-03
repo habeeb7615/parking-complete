@@ -186,6 +186,20 @@ export class VehiclesService {
       lwhereClause += ` AND DATE(vehicle.check_out_time) = '${dateOnly}'`;
     }
 
+    // Status filter: all, parked (checked_in), checked_out
+    const statusFilter = whereClause.find((p: any) => p.key === 'status' && p.value);
+    if (statusFilter) {
+      const statusValue = statusFilter.value.toLowerCase();
+      if (statusValue === 'parked' || statusValue === 'checked_in' || statusValue === 'current_parked') {
+        // Current parked vehicles (check_out_time IS NULL)
+        lwhereClause += ` AND vehicle.check_out_time IS NULL`;
+      } else if (statusValue === 'checked_out' || statusValue === 'checkout') {
+        // Checked out vehicles (check_out_time IS NOT NULL)
+        lwhereClause += ` AND vehicle.check_out_time IS NOT NULL`;
+      }
+      // If status is "all", no additional filter is applied
+    }
+
     // "all" search across multiple fields
     const allValue = whereClause.find((p) => p.key === 'all')?.value;
     if (allValue) {
