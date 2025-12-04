@@ -48,6 +48,9 @@ export class Vehicle {
   @Column('decimal', { nullable: true })
   payment_amount: number;
 
+  @Column('decimal', { precision: 10, scale: 2, nullable: true, comment: 'Calculated parking fee based on duration and rates (for dashboard/reports)' })
+  calculated_amount: number;
+
   @Column({ nullable: true })
   payment_status: string;
 

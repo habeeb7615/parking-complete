@@ -511,6 +511,7 @@ export class VehiclesService {
       `UPDATE vehicles 
        SET check_out_time = ?, 
            payment_amount = ?, 
+           calculated_amount = ?,
            payment_status = ?, 
            updated_by = ?, 
            updated_on = ?
@@ -518,6 +519,7 @@ export class VehiclesService {
       [
         checkoutTime,
         checkoutData.payment_amount,
+        checkoutData.calculated_amount ?? null,
         checkoutData.payment_method === 'free' ? 'free' : 'paid',
         updatedBy || null,
         utcNow,

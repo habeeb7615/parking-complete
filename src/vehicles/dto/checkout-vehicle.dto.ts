@@ -13,6 +13,12 @@ export class CheckoutVehicleDto {
   @Min(0, { message: 'Payment amount must be greater than or equal to 0' })
   payment_amount: number;
 
+  @ApiProperty({ example: 30.00, description: 'Calculated parking fee based on duration and rates (for dashboard/reports)', required: false })
+  @IsNumber({}, { message: 'Calculated amount must be a number' })
+  @IsOptional()
+  @Min(0, { message: 'Calculated amount must be greater than or equal to 0' })
+  calculated_amount?: number;
+
   @ApiProperty({ example: 'cash', enum: ['cash', 'card', 'digital', 'free'], required: false })
   @IsEnum(['cash', 'card', 'digital', 'free'], { message: 'Payment method must be one of: cash, card, digital, free' })
   @IsOptional()
