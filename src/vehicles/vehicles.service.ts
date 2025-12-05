@@ -45,6 +45,26 @@ export class VehiclesService {
     ));
   }
 
+  /**
+   * Generate unique receipt ID
+   * Format: RCPT-YYYYMMDD-HHMMSS-XXXX
+   * Where XXXX is a random 4-digit number (0000-9999)
+   */
+  private generateReceiptId(): string {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    
+    // Generate random 4-digit number (0000-9999)
+    const randomSuffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    
+    return `RCPT-${year}${month}${day}-${hours}${minutes}${seconds}-${randomSuffix}`;
+  }
+
   async getAllVehicles(userId?: string, userRole?: string) {
     // Get contractor_id if user is a contractor
     let contractorId: string | null = null;
@@ -496,6 +516,9 @@ export class VehiclesService {
       checkoutTime = utcNow;
     }
 
+    // Generate unique receipt ID for this checkout
+    const receiptId = this.generateReceiptId();
+
     // CRITICAL: Get original check_in_time directly from database as raw value
     // This avoids any timezone conversion issues
     const originalCheckInTimeRaw = await this.vehicleRepository.query(
@@ -512,6 +535,7 @@ export class VehiclesService {
        SET check_out_time = ?, 
            payment_amount = ?, 
            calculated_amount = ?,
+           receipt_id = ?,
            payment_status = ?, 
            updated_by = ?, 
            updated_on = ?
@@ -520,6 +544,7 @@ export class VehiclesService {
         checkoutTime,
         checkoutData.payment_amount,
         checkoutData.calculated_amount ?? null,
+        receiptId,
         checkoutData.payment_method === 'free' ? 'free' : 'paid',
         updatedBy || null,
         utcNow,
