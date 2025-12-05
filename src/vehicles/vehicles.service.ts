@@ -256,10 +256,38 @@ export class VehiclesService {
       .orderBy(orderByField, orderDirection)
       .getManyAndCount();
 
-    const data = list.map((vehicle) => ({
-      ...vehicle,
-      status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
-    }));
+    // Get unique created_by user IDs (attendant user_ids)
+    const attendantUserIds = [...new Set(list.map(v => v.created_by).filter(id => id !== null))];
+    
+    // Fetch attendants with profiles for these user_ids
+    let attendantMap = new Map<string, string>();
+    if (attendantUserIds.length > 0) {
+      const attendants = await this.attendantRepository
+        .createQueryBuilder('attendant')
+        .leftJoinAndSelect('attendant.profiles', 'profile')
+        .where('attendant.user_id IN (:...userIds)', { userIds: attendantUserIds })
+        .andWhere('attendant.is_deleted = false')
+        .getMany();
+
+      attendants.forEach(attendant => {
+        if (attendant.profiles) {
+          // Use attendant_name if available, otherwise fall back to user_name
+          const name = attendant.profiles.attendant_name || attendant.profiles.user_name || null;
+          attendantMap.set(attendant.user_id, name);
+        }
+      });
+    }
+
+    const data = list.map((vehicle) => {
+      // Get attendant name from the map
+      const attendantName = vehicle.created_by ? attendantMap.get(vehicle.created_by) || null : null;
+
+      return {
+        ...vehicle,
+        status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
+        attendant_name: attendantName,
+      };
+    });
 
     return paginateResponse(data, count, curPage, perPage);
   }
