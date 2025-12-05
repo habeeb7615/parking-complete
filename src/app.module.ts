@@ -13,6 +13,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ContractorDashboardModule } from './contractor-dashboard/contractor-dashboard.module';
 import { AttendantDashboardModule } from './attendant-dashboard/attendant-dashboard.module';
 import { SubscriptionDashboardModule } from './subscription-dashboard/subscription-dashboard.module';
+import { IncomeModule } from './income/income.module';
 import { DatabaseConfig } from './config/database.config';
 
 @Module({
@@ -36,6 +37,7 @@ import { DatabaseConfig } from './config/database.config';
     ContractorDashboardModule,
     AttendantDashboardModule,
     SubscriptionDashboardModule,
+    IncomeModule,
   ],
 })
 export class AppModule {}

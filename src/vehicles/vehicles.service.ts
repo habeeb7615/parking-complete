@@ -173,6 +173,11 @@ export class VehiclesService {
     if (contractorId) {
       lwhereClause += ` AND vehicle.contractor_id = '${contractorId}'`;
     }
+    
+    // Filter by created_by if user is an attendant (only show vehicles created by this attendant)
+    if (userRole === UserRole.ATTENDANT && userId) {
+      lwhereClause += ` AND vehicle.created_by = '${userId}'`;
+    }
 
     const fieldsToSearch = [
       'plate_number',
