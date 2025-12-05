@@ -3,10 +3,11 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AttendantDashboardService } from './attendant-dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 
 @ApiTags('attendant-dashboard')
 @Controller('attendant-dashboard')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class AttendantDashboardController {
   constructor(private attendantDashboardService: AttendantDashboardService) {}

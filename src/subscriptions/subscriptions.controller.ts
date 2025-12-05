@@ -2,6 +2,7 @@ import { Controller, Get, Post, UseGuards, Param, Body, Query } from '@nestjs/co
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -13,7 +14,7 @@ import { ExtendSubscriptionDto } from './dto/extend-subscription.dto';
 
 @ApiTags('subscriptions')
 @Controller('subscriptions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class SubscriptionsController {
   constructor(private subscriptionsService: SubscriptionsService) {}

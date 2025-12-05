@@ -21,10 +21,11 @@ import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { CheckoutVehicleDto } from './dto/checkout-vehicle.dto';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 
 @ApiTags('vehicles')
 @Controller('vehicles')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class VehiclesController {
   constructor(private vehiclesService: VehiclesService) {}

@@ -2,6 +2,7 @@ import { Controller, Get, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { SubscriptionDashboardService } from './subscription-dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -9,7 +10,7 @@ import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-
 
 @ApiTags('subscription-dashboard')
 @Controller('subscription-dashboard')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class SubscriptionDashboardController {
   constructor(private subscriptionDashboardService: SubscriptionDashboardService) {}

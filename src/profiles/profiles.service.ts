@@ -2,6 +2,9 @@ import { Injectable, BadRequestException, ConflictException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Profile } from '../entities/profile.entity';
+import { Attendant } from '../entities/attendant.entity';
+import { Location } from '../entities/location.entity';
+import { Contractor } from '../entities/contractor.entity';
 import { UserRole } from '../common/enums/user-role.enum';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -11,6 +14,12 @@ export class ProfilesService {
   constructor(
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
+    @InjectRepository(Attendant)
+    private attendantRepository: Repository<Attendant>,
+    @InjectRepository(Location)
+    private locationRepository: Repository<Location>,
+    @InjectRepository(Contractor)
+    private contractorRepository: Repository<Contractor>,
   ) {}
 
   async getProfile(userId: string) {
@@ -25,7 +34,98 @@ export class ProfilesService {
         return null;
       }
 
-      return profile;
+      // Check subscription status for contractor or attendant
+      let subscriptionStatus = {
+        is_subscription_active: true,
+        subscription_blocked: false,
+        subscription_status: null,
+        subscription_end_date: null,
+      };
+
+      // SUPER_ADMIN doesn't need subscription check
+      if (profile.role === UserRole.SUPER_ADMIN) {
+        return {
+          ...profile,
+          subscription_status: subscriptionStatus,
+        };
+      }
+
+      // Find the profile to check subscription for
+      let profileToCheck: Profile | null = null;
+
+      if (profile.role === UserRole.CONTRACTOR) {
+        // For contractor, check their own subscription
+        profileToCheck = await this.profileRepository.findOne({
+          where: { id: userId, is_deleted: false },
+          relations: ['subscription_plans'],
+        });
+      } else if (profile.role === UserRole.ATTENDANT) {
+        // For attendant, check their contractor's subscription
+        const attendant = await this.attendantRepository.findOne({
+          where: { user_id: userId, is_deleted: false },
+        });
+
+        if (attendant && attendant.location_id) {
+          const location = await this.locationRepository.findOne({
+            where: { id: attendant.location_id, is_deleted: false },
+          });
+
+          if (location && location.contractor_id) {
+            const contractor = await this.contractorRepository.findOne({
+              where: { id: location.contractor_id, is_deleted: false },
+            });
+
+            if (contractor && contractor.user_id) {
+              profileToCheck = await this.profileRepository.findOne({
+                where: { id: contractor.user_id, is_deleted: false },
+                relations: ['subscription_plans'],
+              });
+            }
+          }
+        }
+      } else {
+        // For any other role, check their own subscription
+        profileToCheck = await this.profileRepository.findOne({
+          where: { id: userId, is_deleted: false },
+          relations: ['subscription_plans'],
+        });
+      }
+
+      // Check subscription validity
+      if (profileToCheck) {
+        const now = new Date();
+        const nowUTC = new Date(Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          now.getUTCHours(),
+          now.getUTCMinutes(),
+          now.getUTCSeconds(),
+          now.getUTCMilliseconds()
+        ));
+
+        const endDate = profileToCheck.subscription_end_date
+          ? new Date(profileToCheck.subscription_end_date)
+          : null;
+
+        const statusIsActive = profileToCheck.subscription_status?.toLowerCase() === 'active';
+        const endDateExists = endDate !== null;
+        const endDateInFuture = endDate ? endDate.getTime() > nowUTC.getTime() : false;
+
+        const isSubscriptionValid = statusIsActive && endDateExists && endDateInFuture;
+
+        subscriptionStatus = {
+          is_subscription_active: isSubscriptionValid,
+          subscription_blocked: !isSubscriptionValid,
+          subscription_status: profileToCheck.subscription_status,
+          subscription_end_date: profileToCheck.subscription_end_date,
+        };
+      }
+
+      return {
+        ...profile,
+        subscription_status: subscriptionStatus,
+      };
     } catch (error) {
       console.error('Error in getProfile:', error);
       throw error;
@@ -99,7 +199,12 @@ export class ProfilesService {
     contractor_name?: string;
     attendant_name?: string;
   }, updatedBy?: string) {
-    const profile = await this.getProfile(userId);
+    // Fetch the actual Profile entity (not the extended object from getProfile)
+    const profile = await this.profileRepository
+      .createQueryBuilder('profile')
+      .where('profile.id = :userId', { userId })
+      .andWhere('profile.is_deleted = :isDeleted', { isDeleted: false })
+      .getOne();
 
     if (!profile) {
       throw new BadRequestException('Profile not found');
@@ -193,7 +298,12 @@ export class ProfilesService {
   }
 
   async updateEmail(userId: string, newEmail: string) {
-    const profile = await this.getProfile(userId);
+    // Fetch the actual Profile entity (not the extended object from getProfile)
+    const profile = await this.profileRepository
+      .createQueryBuilder('profile')
+      .where('profile.id = :userId', { userId })
+      .andWhere('profile.is_deleted = :isDeleted', { isDeleted: false })
+      .getOne();
 
     if (!profile) {
       throw new BadRequestException('Profile not found');

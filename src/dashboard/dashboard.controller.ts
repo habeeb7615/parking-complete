@@ -2,13 +2,14 @@ import { Controller, Get, Post, UseGuards, Query, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 import { IPagination } from '../common/interfaces/pagination.interface';
 import { PaginationSchema } from '../common/schemas/pagination.schema';
 
 @ApiTags('dashboard')
 @Controller('dashboard')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}

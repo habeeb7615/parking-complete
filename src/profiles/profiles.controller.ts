@@ -2,6 +2,7 @@ import { Controller, Get, Post, UseGuards, Param, Body, Query, Request, BadReque
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ProfilesService } from './profiles.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
@@ -17,7 +18,7 @@ export class ProfilesController {
   constructor(private profilesService: ProfilesService) {}
 
   @Get('getOne/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get one profile', description: 'Retrieve user profile by ID' })
   @ApiParam({ name: 'id', description: 'User ID', type: 'string' })
@@ -28,7 +29,7 @@ export class ProfilesController {
   }
 
   @Get('getAll')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all profiles', description: 'Retrieve all user profiles' })
   @ApiResponse({ status: 200, description: 'Profiles retrieved successfully' })
@@ -37,7 +38,7 @@ export class ProfilesController {
   }
 
   @Get('getByRole/:role')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get profiles by role', description: 'Retrieve profiles filtered by role' })
   @ApiParam({ name: 'role', description: 'User role (super_admin, contractor, attendant)', type: 'string' })
@@ -68,7 +69,7 @@ export class ProfilesController {
   }
 
   @Post('update/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update profile', description: 'Update user profile information' })
   @ApiParam({ name: 'id', description: 'User ID', type: 'string' })
@@ -83,7 +84,7 @@ export class ProfilesController {
   }
 
   @Post('updatePassword/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Change password', description: 'Change user password' })
   @ApiParam({ name: 'id', description: 'User ID', type: 'string' })
@@ -98,7 +99,7 @@ export class ProfilesController {
   }
 
   @Post('updateEmail/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update email', description: 'Update user email address' })
   @ApiParam({ name: 'id', description: 'User ID', type: 'string' })

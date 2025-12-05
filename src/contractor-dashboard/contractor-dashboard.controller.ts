@@ -2,11 +2,12 @@ import { Controller, Get, UseGuards, Param, Request, Query } from '@nestjs/commo
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ContractorDashboardService } from './contractor-dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
 
 @ApiTags('contractor-dashboard')
 @Controller('contractor-dashboard')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class ContractorDashboardController {
   constructor(private contractorDashboardService: ContractorDashboardService) {}

@@ -2,6 +2,7 @@ import { Controller, Get, Post, UseGuards, Param, Body, Query, Request } from '@
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { ContractorsService, PaginationParams } from './contractors.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -13,7 +14,7 @@ import { UpdateContractorDto } from './dto/update-contractor.dto';
 
 @ApiTags('contractors')
 @Controller('contractors')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class ContractorsController {
   constructor(private contractorsService: ContractorsService) {}

@@ -2,6 +2,7 @@ import { Controller, Get, Post, UseGuards, Param, Body, Query, Request } from '@
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { LocationsService } from './locations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -15,7 +16,7 @@ import { AssignAttendantDto } from './dto/assign-attendant.dto';
 
 @ApiTags('locations')
 @Controller('locations')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class LocationsController {
   constructor(private locationsService: LocationsService) {}

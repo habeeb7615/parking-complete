@@ -2,6 +2,7 @@ import { Controller, Get, Post, UseGuards, Param, Body, Query } from '@nestjs/co
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 import { PaginationParams } from '../contractors/contractors.service';
 import { IPagination } from '../common/interfaces/pagination.interface';
 import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-response.decorator';
@@ -9,7 +10,7 @@ import { PaginationSchema } from '../common/schemas/pagination.schema';
 
 @ApiTags('payments')
 @Controller('payments')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @ApiBearerAuth('JWT-auth')
 export class PaymentsController {
   constructor(private paymentsService: PaymentsService) {}

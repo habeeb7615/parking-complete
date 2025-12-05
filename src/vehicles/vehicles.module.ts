@@ -8,9 +8,13 @@ import { Contractor } from '../entities/contractor.entity';
 import { Payment } from '../entities/payment.entity';
 import { Attendant } from '../entities/attendant.entity';
 import { Profile } from '../entities/profile.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Vehicle, Location, Contractor, Payment, Attendant, Profile])],
+  imports: [
+    TypeOrmModule.forFeature([Vehicle, Location, Contractor, Payment, Attendant, Profile]),
+    AuthModule,
+  ],
   controllers: [VehiclesController],
   providers: [VehiclesService],
   exports: [VehiclesService],

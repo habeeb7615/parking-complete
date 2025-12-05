@@ -8,6 +8,7 @@ import { Attendant } from '../entities/attendant.entity';
 import { Vehicle } from '../entities/vehicle.entity';
 import { Payment } from '../entities/payment.entity';
 import { Profile } from '../entities/profile.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Profile } from '../entities/profile.entity';
       Payment,
       Profile,
     ]),
+    AuthModule,
   ],
   controllers: [ContractorDashboardController],
   providers: [ContractorDashboardService],

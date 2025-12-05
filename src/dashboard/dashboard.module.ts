@@ -9,6 +9,7 @@ import { Vehicle } from '../entities/vehicle.entity';
 import { Profile } from '../entities/profile.entity';
 import { Session } from '../entities/session.entity';
 import { Payment } from '../entities/payment.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Payment } from '../entities/payment.entity';
       Session,
       Payment,
     ]),
+    AuthModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],
