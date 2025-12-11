@@ -13,6 +13,8 @@ import { randomUUID } from 'crypto';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { CheckoutVehicleDto } from './dto/checkout-vehicle.dto';
+import { VerifyOtpCheckoutDto } from './dto/verify-otp-checkout.dto';
+import { NotificationService } from '../common/services/notification.service';
 
 @Injectable()
 export class VehiclesService {
@@ -27,6 +29,7 @@ export class VehiclesService {
     private attendantRepository: Repository<Attendant>,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
+    private notificationService: NotificationService,
   ) {}
 
   /**
@@ -65,6 +68,13 @@ export class VehiclesService {
     return `RCPT-${year}${month}${day}-${hours}${minutes}${seconds}-${randomSuffix}`;
   }
 
+  /**
+   * Generate 6-digit OTP
+   */
+  private generateOTP(): string {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
   async getAllVehicles(userId?: string, userRole?: string) {
     // Get contractor_id if user is a contractor
     let contractorId: string | null = null;
@@ -92,10 +102,14 @@ export class VehiclesService {
       .orderBy('vehicle.check_in_time', 'DESC')
       .getMany();
 
-    return vehicles.map((vehicle) => ({
-      ...vehicle,
-      status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
-    }));
+    // Exclude OTP fields from response
+    return vehicles.map((vehicle) => {
+      const { otp, otp_generated_at, ...vehicleWithoutOtp } = vehicle;
+      return {
+        ...vehicleWithoutOtp,
+        status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
+      };
+    });
   }
 
   async getVehiclesPaginated(params: PaginationParams = {}): Promise<PaginatedResponse<any>> {
@@ -139,10 +153,14 @@ export class VehiclesService {
 
     const [vehicles, count] = await queryBuilder.skip(skip).take(take).getManyAndCount();
 
-    const data = vehicles.map((vehicle) => ({
-      ...vehicle,
-      status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
-    }));
+    // Exclude OTP fields from response
+    const data = vehicles.map((vehicle) => {
+      const { otp, otp_generated_at, ...vehicleWithoutOtp } = vehicle;
+      return {
+        ...vehicleWithoutOtp,
+        status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
+      };
+    });
 
     return {
       data,
@@ -287,8 +305,10 @@ export class VehiclesService {
       // Get attendant name from the map
       const attendantName = vehicle.created_by ? attendantMap.get(vehicle.created_by) || null : null;
 
+      // Exclude OTP fields from response
+      const { otp, otp_generated_at, ...vehicleWithoutOtp } = vehicle;
       return {
-        ...vehicle,
+        ...vehicleWithoutOtp,
         status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
         attendant_name: attendantName,
       };
@@ -307,8 +327,11 @@ export class VehiclesService {
       throw new NotFoundException('Vehicle not found');
     }
 
+    // Exclude OTP fields from response (as per requirement: No OTP returned to frontend)
+    const { otp, otp_generated_at, ...vehicleWithoutOtp } = vehicle;
+
     return {
-      ...vehicle,
+      ...vehicleWithoutOtp,
       status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
     };
   }
@@ -402,8 +425,10 @@ export class VehiclesService {
         }
       }
 
+      // Exclude OTP fields from response
+      const { otp, otp_generated_at, ...vehicleWithoutOtp } = vehicle;
       return {
-        ...vehicle,
+        ...vehicleWithoutOtp,
         status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
         attendant: attendant,
       };
@@ -421,10 +446,14 @@ export class VehiclesService {
       .orderBy('vehicle.check_in_time', 'DESC')
       .getMany();
 
-    return vehicles.map((vehicle) => ({
-      ...vehicle,
-      status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
-    }));
+    // Exclude OTP fields from response
+    return vehicles.map((vehicle) => {
+      const { otp, otp_generated_at, ...vehicleWithoutOtp } = vehicle;
+      return {
+        ...vehicleWithoutOtp,
+        status: vehicle.check_out_time === null ? 'checked_in' : 'checked_out',
+      };
+    });
   }
 
   async createVehicle(data: CreateVehicleDto, createdBy?: string) {
@@ -444,6 +473,9 @@ export class VehiclesService {
     // Get current UTC time
     const utcNow = this.getCurrentUTCTime();
 
+    // Generate 6-digit OTP
+    const otp = this.generateOTP();
+
     const vehicleId = randomUUID();
     const vehicle = this.vehicleRepository.create({
       id: vehicleId,
@@ -456,6 +488,8 @@ export class VehiclesService {
       session_id: data.session_id || null,
       check_in_time: utcNow,
       payment_status: 'pending',
+      otp: otp,
+      otp_generated_at: utcNow,
       created_by: createdBy || null,
       is_deleted: false,
       created_on: utcNow,
@@ -463,7 +497,30 @@ export class VehiclesService {
     });
 
     const savedVehicle = await this.vehicleRepository.save(vehicle);
-    return this.getVehicleById(savedVehicle.id);
+
+    // Send OTP via SMS/WhatsApp (non-blocking - don't fail check-in if SMS fails)
+    if (data.mobile_number) {
+      this.notificationService.sendOTP(data.mobile_number, data.plate_number, otp).catch((error) => {
+        // Log error but don't throw - OTP is saved in DB
+        console.error(`Failed to send OTP for vehicle ${data.plate_number}:`, error);
+      });
+    }
+
+    // Get vehicle with relations for response (include OTP in check-in response)
+    const vehicleWithRelations = await this.vehicleRepository.findOne({
+      where: { id: savedVehicle.id, is_deleted: false },
+      relations: ['parking_locations', 'contractors'],
+    });
+
+    if (!vehicleWithRelations) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    // Return vehicle with OTP included (only for check-in response)
+    return {
+      ...vehicleWithRelations,
+      status: vehicleWithRelations.check_out_time === null ? 'checked_in' : 'checked_out',
+    };
   }
 
   async updateVehicle(id: string, data: UpdateVehicleDto, updatedBy?: string) {
@@ -479,6 +536,26 @@ export class VehiclesService {
 
     await this.vehicleRepository.save(vehicle);
     return this.getVehicleById(id);
+  }
+
+  async verifyOtpAndCheckout(data: VerifyOtpCheckoutDto, updatedBy?: string) {
+    // Find vehicle by vehicle_id from payload
+    const vehicle = await this.vehicleRepository.findOne({
+      where: { id: data.vehicle_id, is_deleted: false },
+    });
+
+    if (!vehicle) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    // Verify OTP - Compare OTP from request with stored OTP
+    if (!vehicle.otp || vehicle.otp !== data.otp) {
+      // OTP is invalid, return false
+      return { is_verify: false };
+    }
+
+    // OTP is valid - no database update, just return verification result
+    return { is_verify: true };
   }
 
   async checkoutVehicle(vehicleId: string, checkoutData: CheckoutVehicleDto, updatedBy?: string) {
@@ -563,6 +640,7 @@ export class VehiclesService {
     // CRITICAL: Use raw SQL query to update only specific fields
     // Do NOT include check_in_time in SET clause at all - let MySQL keep it unchanged
     // Using check_in_time = check_in_time can sometimes cause timezone issues
+    // Clear OTP fields after successful checkout (one-time use)
     await this.vehicleRepository.query(
       `UPDATE vehicles 
        SET check_out_time = ?, 
@@ -570,6 +648,8 @@ export class VehiclesService {
            calculated_amount = ?,
            receipt_id = ?,
            payment_status = ?, 
+           otp = NULL,
+           otp_generated_at = NULL,
            updated_by = ?, 
            updated_on = ?
        WHERE id = ? AND is_deleted = false`,

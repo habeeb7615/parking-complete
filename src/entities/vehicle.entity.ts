@@ -58,6 +58,12 @@ export class Vehicle {
   receipt_id: string;
 
   @Column({ nullable: true })
+  otp: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  otp_generated_at: Date;
+
+  @Column({ nullable: true })
   created_by: string;
 
   @Column({ nullable: true })

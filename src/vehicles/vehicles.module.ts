@@ -9,6 +9,7 @@ import { Payment } from '../entities/payment.entity';
 import { Attendant } from '../entities/attendant.entity';
 import { Profile } from '../entities/profile.entity';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationService } from '../common/services/notification.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [VehiclesController],
-  providers: [VehiclesService],
+  providers: [VehiclesService, NotificationService],
   exports: [VehiclesService],
 })
 export class VehiclesModule {}

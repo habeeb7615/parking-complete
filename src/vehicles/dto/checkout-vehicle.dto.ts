@@ -23,5 +23,10 @@ export class CheckoutVehicleDto {
   @IsEnum(['cash', 'card', 'digital', 'free'], { message: 'Payment method must be one of: cash, card, digital, free' })
   @IsOptional()
   payment_method?: 'cash' | 'card' | 'digital' | 'free';
+
+  @ApiProperty({ example: '123456', description: 'OTP for checkout verification', required: false })
+  @IsString()
+  @IsOptional()
+  otp?: string;
 }
 

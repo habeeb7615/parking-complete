@@ -21,6 +21,7 @@ import { ApiStandardResponse, ApiErrorResponse } from '../common/decorators/api-
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { CheckoutVehicleDto } from './dto/checkout-vehicle.dto';
+import { VerifyOtpCheckoutDto } from './dto/verify-otp-checkout.dto';
 import { SubscriptionGuard } from '../auth/guards/subscription.guard';
 
 @ApiTags('vehicles')
@@ -98,6 +99,32 @@ export class VehiclesController {
   @ApiResponse({ status: 404, description: 'Vehicle not found' })
   async updateVehicle(@Param('id') id: string, @Body() data: UpdateVehicleDto, @Request() req) {
     return this.vehiclesService.updateVehicle(id, data, req.user?.id);
+  }
+
+  @Post('verify-otp-checkout')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CONTRACTOR, UserRole.ATTENDANT)
+  @ApiOperation({ 
+    summary: 'Verify OTP and Checkout', 
+    description: 'Verify OTP for a vehicle and proceed with checkout if OTP is valid. Returns is_verify: true/false' 
+  })
+  @ApiBody({ type: VerifyOtpCheckoutDto })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'OTP verification result',
+    schema: {
+      type: 'object',
+      properties: {
+        is_verify: { type: 'boolean', example: true }
+      }
+    }
+  })
+  @ApiErrorResponse(404, 'Vehicle not found')
+  async verifyOtpAndCheckout(
+    @Body() data: VerifyOtpCheckoutDto,
+    @Request() req,
+  ) {
+    return this.vehiclesService.verifyOtpAndCheckout(data, req.user?.id);
   }
 
   @Post('checkout/:id')
